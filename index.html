@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hazard Perception Practice</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<section id="intro" class="card">
+  <svg class="tri" viewBox="0 0 56 50" aria-hidden="true"><path d="M28 3 53 47H3Z" fill="#fff" stroke="#d6232a" stroke-width="5" stroke-linejoin="round"/><rect x="26" y="18" width="4" height="15" fill="#0c2340"/><rect x="26" y="36" width="4" height="4" fill="#0c2340"/></svg>
+  <h1>Hazard perception practice</h1>
+  <p>Watch each short clip from the driver's seat. Click (or press Space) as soon as you spot a developing hazard: something that could make you slow down, stop or change direction.</p>
+  <ul class="how">
+    <li>Each clip has one developing hazard worth up to 5 points. The earlier you react, the higher the score.</li>
+    <li>Clicking too early or constantly scores 0 for that clip.</li>
+    <li>Pass mark is 59%, the same ratio as the real test (44 out of 75).</li>
+  </ul>
+  <p class="mut">These clips are simple animations for practice. Real test clips will come later.</p>
+  <button id="start">Start practice test</button>
+</section>
+
+<section id="game" class="hidden">
+  <div class="stage">
+    <canvas id="cv" width="800" height="450" tabindex="0" aria-label="Driving clip. Click or press Space when you see a developing hazard."></canvas>
+    <div class="hud"><span id="clipLbl"></span><span id="flagLbl">Flags: 0</span></div>
+    <svg id="flag" class="flag" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 4v32M8 5h24l-6 8 6 8H8" fill="#d6232a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>
+    <div class="bar"><i id="prog"></i></div>
+  </div>
+  <div class="row" style="margin-top:12px"><button id="hit">Hazard (Space)</button><span class="mut">Click anywhere on the clip, or use the button.</span></div>
+</section>
+
+<section id="review" class="card hidden">
+  <h2 id="rvTitle"></h2>
+  <div class="big"><span id="rvScore"></span><span class="mut" style="font-size:1.2rem"> / 5</span></div>
+  <p id="rvMsg" style="margin-top:8px"></p>
+  <div class="tl" id="tl"></div>
+  <p class="mut" style="font-size:.9rem">Coloured bands show the scoring window (5 to 1 points, left to right). Black lines are your flags.</p>
+  <p id="rvWhy"></p>
+  <button id="next">Next clip</button>
+</section>
+
+<section id="final" class="card hidden">
+  <h2>Your result</h2>
+  <div class="big"><span id="fTotal"></span><span class="mut" style="font-size:1.2rem"> / <span id="fMax"></span></span></div>
+  <p id="fVerdict" style="margin-top:8px"></p>
+  <table><thead><tr><th>Clip</th><th>Score</th></tr></thead><tbody id="fRows"></tbody></table>
+  <div class="row"><button id="again">Try again</button></div>
+</section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
