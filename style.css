@@ -155,3 +155,11 @@ nav button:hover:after,nav button[aria-current=page]:after{transform:scaleX(1)}n
 .tile{padding:12px 6px}.tile.un{background:transparent;color:var(--fg);border:2px dashed var(--red)}.tile.ans{background:#0b4ea2;color:#fff}
 .brk{margin:14px 0}.tut{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:14px 0}
 .tut .card{animation:rise .6s both}.tut .card:nth-child(2){animation-delay:.1s}.tut .card:nth-child(3){animation-delay:.2s}.tut .card:nth-child(4){animation-delay:.3s}
+
+
+/* v7: theory lessons */
+.crumbs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.tlesson canvas{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);background:#10213b;margin-top:10px}
+.kp{list-style:none;padding:0;margin:8px 0 0}
+.kp li{display:flex;gap:10px;padding:10px 14px;margin-bottom:8px;border-radius:12px;background:var(--bg);border:1px solid var(--line);animation:rise .5s both;animation-delay:calc(var(--i)*110ms)}
+.kp li:before{content:"✓";color:var(--ok);font-weight:700}

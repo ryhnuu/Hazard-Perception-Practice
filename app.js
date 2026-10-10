@@ -6,7 +6,7 @@ const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
 
 /* Session-only state (nothing is stored in the browser; a refresh clears it) */
 const S={hist:[],att:[],quiz:[],sq:[],streak:0,best:0,badges:{}};
-const BADGES={first:['🏁','First clip','Complete any clip'],perfect:['🎯','Perfect 5','Score 5 out of 5 on a clip'],streak5:['🔥','Hot streak','5 clips in a row scoring 4 or more'],decoy:['🛡️','Cool head','Leave a decoy clip unflagged'],mock:['🏆','Test passed','Pass a full practice test'],quiz:['📘','Quiz ace','Get every question right in a quiz']};
+const BADGES={first:['🏁','First clip','Complete any clip'],perfect:['🎯','Perfect 5','Score 5 out of 5 on a clip'],streak5:['🔥','Hot streak','5 clips in a row scoring 4 or more'],decoy:['🛡️','Cool head','Leave a decoy clip unflagged'],mock:['🏆','Test passed','Pass a full practice test']};
 
 /* Road signs: [id, name, shape, symbol, meaning and action, category] */
 const R='Regulatory',MD='Mandatory',WN='Warning',IN='Information';
@@ -441,7 +441,7 @@ function flag(){
 /* ---------- test flow ---------- */
 function steps(){const s=$('#steps');s.classList.remove('hidden');s.innerHTML='<span>Clip '+(M.i+1)+' of '+M.list.length+(M.grp?' · '+GN(M.grp):'')+'</span>'+M.list.map((c,i)=>'<i class="'+(i<M.res.length?'done':i===M.i?'cur':'')+'"></i>').join('')}
 function pick(){const d=sh(CLIPS.filter(c=>c.hs==null)),h=sh(CLIPS.filter(c=>c.hs!=null));return sh(d.slice(0,1).concat(h.slice(0,7)))}
-function start(grp,opt){M={i:0,res:[],mx:[],on:true,grp:grp||null,exam:!!(opt&&opt.exam),lesson:false,list:(opt&&opt.list)||(grp?sh(CLIPS.filter(c=>c.g===grp)):pick())};startClip()}
+function start(grp,opt){HT='practice';M={i:0,res:[],mx:[],on:true,grp:grp||null,exam:!!(opt&&opt.exam),lesson:false,list:(opt&&opt.list)||(grp?sh(CLIPS.filter(c=>c.g===grp)):pick())};startClip()}
 function startClip(){
  const c=M.list[M.i];clicks=[];if(document.activeElement)document.activeElement.blur();
  $('#clipLbl').textContent='Clip '+(M.i+1)+' of '+M.list.length;$('#speedLbl').textContent=c.mph+' mph';
@@ -507,11 +507,12 @@ function results(){
 /* ---------- badges, router, settings ---------- */
 function award(id){if(S.badges[id])return;S.badges[id]=1;const b=BADGES[id],t=$('#toast');t.textContent=b[0]+' Badge unlocked: '+b[1];t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3200);confetti(innerWidth-120,innerHeight-80)}
 function show(id){
+ if(id!=='theory')stopTV();
  if(id!=='clip'){P.run=false;cancelAnimationFrame(raf)}
  if(id!=='clip'&&id!=='results')$('#steps').classList.add('hidden');
  $$('.screen').forEach(s=>s.classList.add('hidden'));const el=$('#'+id);el.classList.remove('hidden','enter');void el.offsetWidth;el.classList.add('enter');
- $$('nav button').forEach(b=>b.removeAttribute('aria-current'));const nb=$('nav [data-go="'+(id==='clip'||id==='results'?(M.exam?'exam':M.lesson?'learn':M.grp?'hazards':'practice'):id)+'"]');if(nb)nb.setAttribute('aria-current','page');
- if(id==='profile')profile();if(id==='hazards')renderHazards();if(id==='learn')renderLearn();if(id==='exam')examIntro();if(id==='theory')quiz(Q.mode);window.scrollTo(0,0);
+ $$('nav button').forEach(b=>b.removeAttribute('aria-current'));const nb=$('nav [data-go="'+(id==='clip'||id==='results'?(M.exam?'exam':(M.lesson||M.grp)?'hazards':'practice'):id)+'"]');if(nb)nb.setAttribute('aria-current','page');
+ if(id==='profile')profile();if(id==='hazards')hazTab(HT);if(id==='exam')examIntro();if(id==='theory')quiz(Q.mode);window.scrollTo(0,0);
 }
 
 /* ---------- hazard groups ---------- */
@@ -548,7 +549,7 @@ function renderLearn(){
 $('#lchips').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){LF=b.dataset.f;renderLearn()}});
 $('#lessons').addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(b)startLesson(b.dataset.l)});
 function startLesson(id){
- const c=CLIPS.find(x=>x.id===id);M={i:0,res:[],mx:[],on:true,grp:null,exam:false,lesson:true,list:[c]};clicks=[];
+ HT='learn';const c=CLIPS.find(x=>x.id===id);M={i:0,res:[],mx:[],on:true,grp:null,exam:false,lesson:true,list:[c]};clicks=[];
  if(document.activeElement)document.activeElement.blur();
  $('#clipLbl').textContent='Lesson: '+c.title;$('#speedLbl').textContent=c.mph+' mph';
  $('#capt').textContent=c.cap;$('#capt').classList.toggle('hidden',!$('#cc').checked);
@@ -647,27 +648,213 @@ $('#examBox').addEventListener('click',e=>{
  else if(id==='ebegin')start(null,{exam:true,list:examList()});
 });
 
-let Q={mode:'theory',items:[],i:0,sc:0,done:false};
-function quiz(mode){
- const cat=$('#sigCat').value,pool=SGL.filter(s=>cat==='All'||s.c===cat);
- Q={mode,i:0,sc:0,done:false,items:[]};
- $$('[data-mode]').forEach(b=>b.setAttribute('aria-selected',b.dataset.mode===mode));$('#sigBar').classList.toggle('hidden',mode==='theory');
- if(mode==='lib'){$('#quiz').innerHTML='<div class="lib">'+pool.map((s,i)=>'<div class="sg flip" style="--i:'+(i%24)+'" tabindex="0"><div class="fi"><div class="ff">'+svgOf(s,'sign sm')+'<b>'+s.n+'</b><span class="mut">Hover to flip</span></div><div class="fb"><b>'+s.n+'</b><span>'+s.d+'</span></div></div></div>').join('')+'</div>';return}
- Q.items=mode==='signs'?sh(pool).slice(0,10).map(s=>{const o=sh([s.d].concat(sh(SGL.filter(x=>x.d!==s.d)).slice(0,3).map(x=>x.d)));return{svg:svgOf(s,'sign'),q:'What does this sign mean and what should you do?',o,a:o.indexOf(s.d),why:s.n+': '+s.d}}):sh(THEORY.concat(NEWQ.filter(x=>typeof x.a==='number'))).map(x=>{const o=sh(x.o.map((t,i)=>[t,i===x.a]));return{q:x.q,o:o.map(z=>z[0]),a:o.findIndex(z=>z[1]),why:x.why}});
- qr();
+/* ---------- hazards: two tabs ---------- */
+let HT='practice';
+function hazTab(t){HT=t;$('#htP').setAttribute('aria-selected',t==='practice');$('#htL').setAttribute('aria-selected',t==='learn');$('#hpPractice').classList.toggle('hidden',t!=='practice');$('#hpLearn').classList.toggle('hidden',t!=='learn');if(t==='practice')renderHazards();else renderLearn()}
+$$('[data-ht]').forEach(b=>b.addEventListener('click',()=>hazTab(b.dataset.ht)));
+/* ---------- Theory and Signs: Theory (animated lessons) + Sign library ---------- */
+const TG=[
+{id:'alert',n:'Alertness',i:'👀',d:'Stay observant, avoid distractions and know when you are unfit to drive.'},
+{id:'att',n:'Attitude',i:'🤝',d:'Be patient, considerate and calm, whatever other drivers do.'},
+{id:'saf',n:'Safety and your vehicle',i:'🔧',d:'Checks, tyres, brakes, seat belts and keeping your vehicle roadworthy.'},
+{id:'mar',n:'Safety margins',i:'📏',d:'Stopping distances, gaps and leaving enough space in all conditions.'},
+{id:'haz',n:'Hazard awareness',i:'⚠️',d:'Spot and anticipate developing hazards early.'},
+{id:'vru',n:'Vulnerable road users',i:'🚶',d:'Pedestrians, cyclists, motorcyclists, horse riders and the hierarchy of road users.'},
+{id:'oth',n:'Other types of vehicle',i:'🚌',d:'Motorcycles, large vehicles, buses, trams, tractors and emergency vehicles.'},
+{id:'han',n:'Vehicle handling',i:'🛞',d:'Weather, road surfaces, skids and driving at night.'},
+{id:'mw',n:'Motorway rules',i:'🛣️',d:'Joining, lanes, overtaking, breakdowns and smart motorways.'},
+{id:'rul',n:'Rules of the road',i:'📘',d:'Speed limits, junctions, roundabouts, crossings, lights, markings and parking.'},
+{id:'sig',n:'Road and traffic signs',i:'🛑',d:'Sign shapes and colours, road markings and signals. The Sign library has every sign.'},
+{id:'doc',n:'Documents',i:'📄',d:'Licences, insurance, MOT, vehicle tax and penalty points.'},
+{id:'inc',n:'Incidents, accidents and emergencies',i:'🚑',d:'Breakdowns, first aid and what to do at the scene of a crash.'},
+{id:'load',n:'Vehicle loading',i:'📦',d:'Loads, roof racks, towing, passengers and pets.'}];
+const AR=(cx,cy,r,a0,a1,t0,t1,n)=>Array.from({length:n+1},(_,i)=>{const u=i/n,a=(a0+(a1-a0)*u)*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a),t0+(t1-t0)*u]});
+const TDS={
+ give:['td','cross',[['car','#2f6fd0',[[720,175,.5],[0,175,5]]],['car','#8a8f98',[[0,125,1],[720,125,6]]],['car','#d6232a',[[343,320,0],[343,222,1.4],[343,222,3.4],[335,196,4],[300,176,4.6],[0,176,7.5]]]],[['Give way: wait for a safe gap',360,30,0,3.3],['Go when the way is clear',360,30,3.4,8]]],
+ rbt:['td','rbt',[['car','#2f6fd0',AR(360,150,70,40,250,0,4.4,24).concat([[343,60,4.8],[343,-30,6]])],['car','#d6232a',[[0,132,0],[240,132,1.5],[240,132,4.2]].concat(AR(360,150,70,198,342,4.3,6.9,18),[[480,132,7.4],[720,132,8]])]],[['Give way to traffic from the right',360,30,0,4.2],['Signal, then enter when there is a safe gap',360,30,4.3,8]]],
+ zebra:['td','zebra',[['car','#d6232a',[[0,125,0],[290,125,2.5],[290,125,6],[720,125,8]]],['ped','',[[360,70,1.5],[360,230,6]]]],[['Slow down and be ready to stop',360,30,0,2.5],['Stop for people on the crossing',360,30,2.6,5.8],['Move off when it is clear',360,30,5.9,8]]],
+ over:['td','two',[['van','#c9a05a',[[130,125,0],[520,125,8]]],['car','#d6232a',[[-40,125,0],[60,125,2],[190,125,3],[240,175,3.6],[470,175,5.2],[540,125,5.9],[720,125,7.6]]],['car','#2f6fd0',[[720,175,0],[720,175,5.5],[560,175,8]]]],[['Check the road ahead is clear',360,30,0,2.9],['Pass quickly and safely',360,30,3,5.5],['Move back when you can see the vehicle in your mirror',360,30,5.6,8]]],
+ dual:['td','dual',[['van','#c9a05a',[[120,75,0],[500,75,8]]],['car','#d6232a',[[0,75,0],[90,75,1.5],[160,115,2.4],[420,115,4.8],[500,75,5.6],[720,75,7.6]]]],[['Keep to the left-hand lane',360,30,0,1.5],['Overtake on the right',360,30,1.6,4.8],['Return to the left when it is safe',360,30,4.9,8]]],
+ join:['td','dual',[['car','#2f6fd0',[[-50,75,0],[720,75,3.6]]],['car','#d6232a',[[0,32,0],[230,32,2.2],[300,60,3],[360,75,3.6],[720,75,7]]]],[['Check mirrors and match speed on the slip road',360,30,0,2.2],['Join when there is a safe gap',360,30,2.3,8]],'slip'],
+ amb:['td','two',[['car','#2f6fd0',[[0,125,0],[150,125,2],[220,108,3.4],[260,108,4.5],[260,108,6],[400,125,7.5]]],['amb','',[[-120,125,.5],[120,125,2.6],[200,150,3.4],[500,150,5],[560,125,5.4],[760,125,6.4]]]],[['Check your mirrors and stay calm',360,30,0,2.8],['Pull in safely, within the law',360,30,2.9,5],['Move off once it has passed',360,30,5.1,8]]],
+ cyc:['td','two',[['bike','#f2b705',[[100,112,0],[520,112,8]]],['car','#d6232a',[[-60,125,0],[140,125,2],[210,150,3],[420,150,5],[500,125,5.8],[760,125,8]]]],[['Do not squeeze past',360,30,0,2.8],['Leave at least 1.5 metres',360,30,2.9,5.5],['Move back in only when clear',360,30,5.6,8]]],
+ lorry:['td','cross',[['bus','#e8e8e0',[[0,125,0],[200,125,1.5],[260,145,2.6],[320,140,3.3],[343,100,4],[343,-20,5.5]]],['car','#d6232a',[[0,125,1],[170,125,2.8],[170,125,4.6],[720,125,7.8]]]],[['Large vehicles swing out before they turn',360,30,0,3.5],['Stay back. Never squeeze up the inside',360,30,3.6,8]]]
+};
+const TL=[
+['alert','Observation and mirrors','Know what is around you before you signal or move.',['Check your mirrors regularly, and always before you signal, change speed or change direction.','Use the Mirrors, Signal, Manoeuvre routine every time.','Mirrors have blind spots, so glance over your shoulder before moving off or changing lanes.','Windscreen and junction pillars can hide cyclists and pedestrians. Move your head to see around them.','Keep your windscreen, mirrors and windows clean and clear.'],['flow',['Mirrors','Signal','Manoeuvre']]],
+['alert','Distractions','Anything that takes your eyes or mind off the road is dangerous.',['Using a hand-held phone while driving is illegal: 6 penalty points and a £200 fine.','Set up your sat nav and music before you set off, and stop safely if you need to change them.','Even hands-free calls can distract you. Let calls go to voicemail.','Do not eat, drink or search for items while driving.','Passengers can distract too. Ask them to keep the noise down if it affects your concentration.'],['icons',[['📱','Phone'],['🗺️','Sat nav'],['🎵','Music'],['🍔','Eating'],['💬','Passengers'],['🔔','Notifications']]]],
+['alert','Tiredness','Fatigue slows your reactions and can make you fall asleep at the wheel.',['Take a break of at least 15 minutes every two hours of driving.','Do not start a long journey if you are already tired. Plan your rest stops.','Warning signs are yawning, heavy eyelids, trouble concentrating and drifting in your lane.','Fresh air, loud music or coffee only help for a short time. Stop in a safe place and rest.','Tiredness crashes are most common late at night, early in the morning and in the mid-afternoon.'],['clock','2 hours','Take a break at least every two hours']],
+['alert','Alcohol, drugs and medicine','They slow your reactions and affect your judgement.',['The drink-drive limit is 80 mg of alcohol per 100 ml of blood in England, Wales and Northern Ireland, and 50 mg in Scotland.','The safest advice is to drink nothing at all if you are going to drive.','Alcohol stays in your body for hours, so you may still be over the limit the next morning.','Some medicines make you drowsy. Check the label and ask your doctor or pharmacist.','Driving under the influence of illegal drugs is an offence. A drink-drive conviction usually means a ban of at least 12 months.'],['icons',[['🍺','Alcohol'],['💊','Medicines'],['🚫','Illegal drugs'],['☕','Coffee does not sober you up']]]],
+['att','Patience and consideration','Good drivers stay calm and make allowances for others.',['Be patient. Do not hold up traffic or rush other road users.','Give way when it is safe, and acknowledge courtesy with a wave or a thank you.','Flashing your headlights only means "I am here". Never treat it as an invitation to go.','Use the horn only to warn of danger. Do not use it in a built-up area between 11:30 pm and 7 am unless another vehicle poses a danger.','Allow extra time and room for learners, who may be nervous.'],['icons',[['😌','Stay calm'],['👋','Say thanks'],['🚦','Be patient'],['🤝','Let others in']]]],
+['att','Tailgating and road rage','Do not react to aggressive drivers.',['If someone is tailgating you, do not speed up or brake suddenly. Slow down gently and let them pass when it is safe.','Do not retaliate, make gestures or race other drivers.','If you feel threatened, stay in the car with the doors locked and drive to a place of safety such as a police station.','Never use your vehicle to block another driver.','Leave a safe gap behind the vehicle ahead so you never become the tailgater.'],['flow',['Stay calm','Ease off','Let them pass','Drive on safely']]],
+['att','Sharing the road and parking','Think about how your driving affects everyone else.',['Give priority to buses pulling out, and make way for emergency vehicles.','Do not park where you block drives, dropped kerbs, bus stops or entrances.','Do not use bus lanes during their hours of operation.','Electric and hybrid vehicles are very quiet, so pedestrians may not hear them.','Allow others to cross, merge or turn when it is safe to do so.'],['icons',[['🚌','Buses'],['🚲','Cyclists'],['🐴','Horses'],['🚚','Large vehicles'],['🅿️','Parking'],['🚑','Emergency vehicles']]]],
+['saf','Daily vehicle checks','A quick check can prevent a breakdown or a crash.',['Remember POWDERY: Petrol, Oil, Water, Damage, Electrics, Rubber and Yourself.','Check engine oil, coolant and windscreen washer fluid regularly.','Check that all lights and indicators work, and that lights and number plates are clean.','Check tyres for cuts, bulges and for the correct pressure and tread.','Make sure you are fit to drive: well rested, sober and comfortable.'],['check',['Petrol (fuel level)','Oil','Water (coolant and screenwash)','Damage','Electrics (lights, indicators)','Rubber (tyres)','Yourself']]],
+['saf','Tyres','Your tyres are the only part of the car that touches the road.',['The legal minimum tread depth for cars is 1.6 mm across the central three-quarters of the tread, around the whole tyre.','Check tyre pressures regularly when the tyres are cold, and check the spare too.','Under-inflated or over-inflated tyres wear unevenly and affect handling and braking.','Look for cuts, bulges and objects stuck in the tread, and replace damaged tyres.','The correct pressures are in your vehicle handbook.'],['bars',[['Legal minimum',1.6,8,'#d6232a','1.6 mm'],['Advised: replace around',3,8,'#f2b705','3 mm'],['A new tyre (about)',8,8,'#1b8a4f','8 mm']]]],
+['saf','Brakes, lights and MOT','Keep every safety system working.',['If your ABS warning light stays on, your normal brakes still work but ABS may not. Get it checked.','Brakes that pull to one side, feel spongy or make noise need checking at once.','A car needs an MOT after three years and then every year. Service it regularly too.','Use headlights in poor daytime visibility, and do not dazzle others.','Do not use hazard lights while driving, except on a motorway or dual carriageway to warn of a hazard ahead.'],['icons',[['🛑','Brakes'],['🎯','Steering'],['💡','Lights'],['📋','MOT']]]],
+['saf','Seat belts and child safety','Wear a seat belt on every journey.',['The driver must make sure passengers under 14 wear seat belts or use the right child seat.','Children must use a child car seat until they are 12 years old or 135 cm tall, whichever comes first.','Adjust head restraints so the top is at least level with your eyes.','Never put a rear-facing baby seat in front of an active airbag.','Lock your car and take valuables with you.'],['icons',[['🧒','Under 14: driver is responsible'],['💺','Child seat until 12 or 135 cm'],['🛡️','Head restraint up'],['🔒','Lock the car']]]],
+['mar','Stopping distances','Overall stopping distance is thinking distance plus braking distance.',['Thinking distance is how far you travel before you react. Braking distance is how far you travel once the brakes are on.','At 30 mph the typical stopping distance is 23 metres, about 6 car lengths. At 70 mph it is 96 metres.','If you double your speed, your braking distance becomes about four times longer.','Tiredness, alcohol and distractions all lengthen thinking distance.','Worn tyres or brakes, wet roads and heavy loads lengthen braking distance.'],['stop']],
+['mar','The two-second rule','Keep a safe gap behind the vehicle in front.',['Pick a fixed object ahead, such as a lamp post. When the car ahead passes it, say "Only a fool breaks the two-second rule".','If you pass the object before you finish saying it, you are too close.','Leave at least two seconds in good conditions, and double it to four seconds on wet roads.','Leave even more on icy roads, up to ten times the normal gap.','Leave extra room behind large vehicles and motorcycles, and when towing.'],['gap',2]],
+['mar','Wet, icy and foggy weather','Bad weather means you must slow down and leave more room.',['On wet roads stopping distances are at least double. On ice they can be up to ten times longer.','In fog, slow down and use dipped headlights. Use fog lights only when visibility is under 100 metres, and turn them off when it improves.','Do not follow the tail lights of the vehicle ahead too closely in fog.','On ice, be gentle: pull away in a higher gear and brake and steer smoothly.','Look out for spray, puddles and standing water, and slow down.'],['bars',[['Dry road',1,10,'#1b8a4f','×1'],['Wet road',2,10,'#f2b705','×2 or more'],['Icy road',10,10,'#d6232a','up to ×10']]]],
+['mar','Overtaking and giving space','Overtake only when it is safe, and leave room.',['Only overtake when it is safe and legal, and you can see well ahead.','Do not overtake near junctions, bends, hill crests, pedestrian crossings, or where there are double white lines with the solid line nearest you.','Give cyclists at least 1.5 metres when passing at up to 30 mph, and more at higher speeds.','Give horse riders and pedestrians at least 2 metres, and pass horses slowly.','After overtaking, move back only when you can see the vehicle in your mirror.'],TDS.over],
+['haz','What is a developing hazard?','Learn what you are looking for in the hazard perception test.',['A hazard is anything that may make you change speed or direction.','A developing hazard is one that is getting more dangerous, such as a car edging out of a junction.','In the hazard perception test you press Space when a hazard starts to develop, and the earlier the better.','Not everything is a hazard. A parked car that stays still is not a developing hazard.','Practise in the Hazards section to learn the clues.'],['icons',[['🚶','Pedestrian steps out'],['🚗','Car pulls out'],['🚲','Cyclist swerves'],['⚽','Ball in the road']]]],
+['haz','Scanning and anticipation','Good drivers look ahead and predict what could happen.',['Look as far ahead as you can and keep scanning, not just at the car in front.','Look for clues such as brake lights, parked vans, bus stops, junctions, schools and gaps between parked cars.','Ask yourself what could happen next, and be ready for it.','Reduce your speed early and gently rather than braking late.','Check your mirrors often so you know what is behind before you slow or move out.'],['flow',['Scan far ahead','Scan the sides','Check mirrors','Predict','Act early']]],
+['haz','Weather and visibility hazards','Poor visibility hides hazards until the last moment.',['Slow down when visibility drops, and use dipped headlights in poor light.','In low sun, use your sun visor, slow down and expect people you cannot see.','At night, drive at a speed that lets you stop in the distance you can see.','Use wipers and demisters to keep a clear view.','Rain and ice mean longer stopping distances.'],['icons',[['🌧️','Rain'],['🌫️','Fog'],['☀️','Low sun glare'],['🌙','Night'],['❄️','Ice']]]],
+['vru','Hierarchy of road users','Those who can cause the most harm have the most responsibility.',['The Highway Code introduced a hierarchy of road users in 2022.','Pedestrians are the most vulnerable, then cyclists, horse riders and motorcyclists.','Cars, vans, buses and lorries must take the most care, especially large vehicles.','It does not remove responsibility from vulnerable users. Everyone must take care.','When turning into a side road, give way to pedestrians who are crossing or waiting to cross.'],['icons',[['🚶','Pedestrians'],['🚲','Cyclists'],['🐴','Horse riders'],['🏍️','Motorcyclists'],['🚗','Cars and taxis'],['🚐','Vans and minibuses'],['🚚','Buses and lorries']]]],
+['vru','Pedestrians and children','Expect people to step out, especially near schools and shops.',['Slow down near schools, shops and bus stops, where children may run out.','A white stick means a pedestrian is visually impaired. A white stick with a red band means they are both deaf and blind.','A guide dog or hearing dog means the person may not see or hear you, so be patient.','Older and disabled pedestrians may cross slowly. Do not rush them or sound your horn.','Stop for a school crossing patrol showing a STOP sign.'],['icons',[['🚶','People stepping out'],['🦯','White stick'],['🦮','Guide dog'],['🧓','Older people'],['🧒','Children'],['🏫','School patrol']]]],
+['vru','Cyclists and motorcyclists','They are small, fast to appear and easy to miss.',['Leave at least 1.5 metres when overtaking cyclists at up to 30 mph, and more at higher speeds. If you cannot, wait.','Cyclists may ride in the middle of the lane to be seen and stay safe, so be patient.','Look twice at junctions. Motorcyclists and cyclists are easy to miss.','Use the Dutch reach: open your car door with the hand furthest from the door to check for cyclists.','Do not cut across cyclists at junctions or when turning.'],TDS.cyc],
+['vru','Horse riders, animals and scooters','Give animals and slow users plenty of time and space.',['Pass horses slowly, under 10 mph, and give at least 2 metres. Do not sound your horn or rev your engine.','Watch for animals on country roads, especially at dusk and dawn, and slow down for animal signs.','If a herd is being driven along the road, stop and switch off your engine if needed.','Mobility scooters can travel at up to 8 mph on the road, so pass with care.','Children and pets can dart into the road without warning.'],['icons',[['🐴','Pass horses slowly and wide'],['🐕','Dogs and animals'],['🛴','Mobility scooters, max 8 mph'],['🐑','Livestock on rural roads']]]],
+['oth','Motorcycles','Motorcyclists need extra care and space.',['Motorcycles are small and easy to miss, especially at junctions and when filtering between lanes.','Check mirrors and blind spots before changing lanes or turning, and look twice.','A motorcyclist may move around potholes, drains and oil, so give them room.','Leave extra space behind a motorcyclist, especially in wet or icy weather.','Strong winds can blow motorcyclists off line.'],['icons',[['🏍️','Hard to see'],['🔍','Check blind spots'],['👀','Look twice at junctions'],['📏','Leave space']]]],
+['oth','Large vehicles and buses','Long vehicles need more room and cannot see everything.',['Large vehicles need more room to turn and may swing out to the right before turning left.','Never squeeze into the gap on the inside of a turning lorry.','If you cannot see the driver in their mirrors, they cannot see you. Keep well back.','Give priority to buses pulling out from a stop if it is safe.','Expect lorries to take a wide line on bends and roundabouts.'],TDS.lorry],
+['oth','Trams, tractors and emergency vehicles','Know how to share the road with special vehicles.',['Emergency vehicles: stay calm, check the route they need to take, and pull in safely. Do not break the law to make way.','Never stop on a crossing or in a box junction to let one pass.','Trams cannot swerve and take a long distance to stop. Do not stop or park on tram tracks.','Tractors and farm machinery are slow and may leave mud on the road. Overtake only when it is safe.','Electric vehicles are quiet, so take extra care around pedestrians.'],TDS.amb],
+['han','Wet, windy and flooded roads','Adapt your driving to the surface and conditions.',['Aquaplaning is when your tyres lose contact with the road on standing water. Ease off the accelerator and do not brake hard.','Cross floods slowly in a low gear, and test your brakes afterwards.','In strong winds, hold the steering firmly and take extra care near cyclists, motorcyclists and high-sided vehicles.','Wet roads can be very slippery, especially just after rain starts.','Keep your speed down on bends in wet conditions.'],['icons',[['🌧️','Wet: double the gap'],['💨','Wind: grip the wheel'],['🌊','Flood: go slowly'],['🛞','Aquaplaning: ease off']]]],
+['han','Skids and braking','Smooth control keeps the car balanced.',['If you start to skid, ease off the accelerator and steer smoothly in the direction the rear of the car is sliding.','With ABS, brake firmly and keep your foot on the pedal. Do not pump the brakes.','On a long downhill, use a lower gear and engine braking so your brakes do not overheat and fade.','Brake early and smoothly so the car stays balanced.'],['flow',['Ease off the accelerator','Steer gently into the skid','Do not brake hard','Straighten up']]],
+['han','Driving in the dark','See and be seen at night.',['Use dipped headlights from sunset to sunrise and whenever visibility is poor.','You should be able to stop in the distance you can see.','Dip your headlights for oncoming traffic and when following another vehicle.','If you are dazzled, slow down and stop if you have to. Do not stare at oncoming headlights.','Pedestrians and cyclists are harder to see at night, so slow down in built-up areas.'],['icons',[['🌙','Dipped headlights'],['🔆','Dip for oncoming traffic'],['🦌','Animals on the road'],['👀','Drive within your headlights']]]],
+['mw','Joining and leaving','Join smoothly and leave in good time.',['Use the slip road to match your speed to the traffic, check your mirrors and signal.','Join the left-hand lane when there is a safe gap, and do not force others to slow down.','Give way to traffic already on the motorway unless signs or markings say otherwise.','To leave, signal in good time, move into the left-hand lane and slow down on the slip road.','After a long motorway journey, check your speed because it can feel slower than it is.'],TDS.join],
+['mw','Lanes and overtaking','Keep left, overtake on the right.',['Keep to the left-hand lane unless you are overtaking, and move back when it is safe.','Overtake on the right. Do not overtake on the left except in slow-moving queues.','Do not cut in. Leave at least a two-second gap, and more in the wet.','Do not stay in the middle or right-hand lane when the left lane is clear.','Learner drivers may use motorways only with an approved driving instructor in a dual-controlled car.'],TDS.dual],
+['mw','Breakdowns, smart motorways and signs','Know what to do and what the signals mean.',['The hard shoulder is for emergencies only unless signs say it is a running lane.','A red X above a lane means the lane is closed. Do not use it.','Variable speed limits shown in red circles must be obeyed.','Flashing amber lights warn of a hazard ahead. Flashing red lights mean stop.','On a motorway never use a warning triangle, and do not try to repair your vehicle on the hard shoulder.'],['flow',['Signal left and stop','Hazard lights on','Leave by the left door','Wait behind the barrier','Call for help']]],
+['rul','Speed limits','Limits are maximums, not targets.',['A built-up area with street lights has a 30 mph limit unless signs show otherwise.','Cars: 60 mph on single carriageways, and 70 mph on dual carriageways and motorways.','Cars towing a caravan or trailer: 50 mph on single carriageways and 60 mph on dual carriageways and motorways.','Drive more slowly when conditions are poor.','Look for speed limit signs, repeater signs and 20 mph zones near schools.'],['icons',[['🏘️','30 mph in built-up areas'],['🛤️','60 mph on single carriageways'],['🚗','70 mph on dual carriageways and motorways'],['🚐','Towing: 50 single, 60 dual and motorway']]]],
+['rul','Junctions and roundabouts','Give way correctly and signal clearly.',['At a roundabout, give way to traffic from your right unless signs or markings say otherwise.','Signal left when exiting, and use the left lane to turn left and the right lane to turn right.','Watch for cyclists and motorcyclists, who may take a wide line.','At give way lines, slow down, look both ways and go only when it is safe.','Do not pull out in front of vehicles you have not seen properly.'],TDS.rbt],
+['rul','Pedestrian crossings','Know your crossings and who has priority.',['At a zebra crossing, slow down and stop for anyone who has stepped on to the crossing.','Do not overtake the moving vehicle nearest the crossing, or park on the zigzag lines.','At a pelican crossing, a flashing amber light means give way to pedestrians, and go if it is clear.','Puffin and toucan crossings use sensors and lights. Toucans also let cyclists cross, and pegasus crossings are for horse riders.','Do not wave people across, because other traffic may not stop.'],TDS.zebra],
+['rul','Traffic lights and signals','Obey the lights and understand each stage.',['Red means stop. Red and amber together also means stop. Green means go if the way is clear.','Amber means stop unless you are so close to the line that stopping would be unsafe.','Do not move forward on green if your exit is blocked, and never cross a red light.','A flashing red light at a level crossing means stop.','A police officer\'s signals overrule traffic lights.'],['lights']],
+['rul','Markings and parking','Read the lines and park where it is allowed.',['Double white lines: do not cross if the line nearest you is solid.','Double yellow lines mean no waiting at any time. Single yellow lines restrict waiting at the times shown on signs.','Yellow box junctions: do not enter unless your exit is clear, except when turning right and waiting for oncoming traffic.','Do not park within 10 metres of a junction, on a bend, near a school entrance or on zigzag lines.','Blue badge bays are for badge holders only.'],['icons',[['⬜','Double white: solid nearest, no overtaking'],['🟨','Yellow lines: waiting restrictions'],['🔲','Box junction: enter only if clear'],['⚠️','Zigzags: no stopping or parking']]]],
+['sig','Sign shapes and colours','The shape and colour tell you what kind of sign it is.',['Circular signs give orders. Red rings say what not to do, and blue circles say what you must do.','Triangular signs warn of hazards ahead.','Rectangular signs give information. Blue is for motorways, green for primary routes and white for local roads.','A red octagon is STOP, and an inverted triangle means give way.','Browse every sign in the Sign library tab.'],['icons',[['🔴','Circles: orders'],['🔵','Blue circles: must do'],['🔺','Triangles: warnings'],['🟦','Blue rectangles: information'],['🟩','Green: primary routes'],['⬜','White: other routes']]]],
+['sig','Road markings and studs','Lines and studs guide you day and night.',['Cat\'s eyes: red on the left edge, white between lanes, amber on the central reservation side, and green at slip roads and lay-bys.','Long lines with short gaps warn of a hazard ahead.','Hatched markings protect traffic turning right. Do not enter them unless you have to.','Arrows show which way you must go in that lane.','Stop and give way lines show exactly where to stop.'],['icons',[['🔴','Red studs: left edge'],['⚪','White studs: lanes'],['🟠','Amber studs: central reservation'],['🟢','Green studs: slip roads and lay-bys']]]],
+['sig','Signals and police directions','Signal clearly and obey the police.',['Use your indicators in good time, and cancel them after the manoeuvre.','If your indicators are not working, use arm signals. Right turn: arm straight out.','Left turn: arm out, moving in a small circle. Slowing down: arm moving up and down.','A police officer\'s signals overrule traffic lights and signs.','Flashing headlights only warn others that you are there. They are not a signal to go.'],['icons',[['👉','Right turn: arm straight out'],['🔄','Left turn: arm out, in a circle'],['🤚','Slowing: arm up and down'],['👮','Police: obey their signals']]]],
+['doc','Licences and age rules','Know what you need before you drive.',['You need a valid provisional licence before driving as a learner.','You can drive a car from age 17, or 16 if you get the enhanced rate of the mobility part of PIP.','Learners must show L plates (D plates in Wales) and be supervised by someone aged 21 or over who has held a full licence for at least three years.','A photocard licence must be renewed every 10 years. Tell DVLA if your name, address or health changes.','New drivers who get 6 or more points within two years of passing lose their licence.'],['icons',[['🪪','Photocard licence'],['🎂','Car at 17'],['🔁','Renew every 10 years'],['🅻','L plates and a supervisor'],['🏥','Tell DVLA about medical conditions']]]],
+['doc','Insurance, MOT and vehicle tax','Keep your vehicle legal.',['You must have at least third party insurance to drive on a public road.','Cars need an MOT every year from the third anniversary of registration.','Your vehicle must be taxed unless it has been declared off the road with a SORN.','The V5C registration certificate shows the registered keeper. Tell DVLA when you buy or sell a vehicle.','Driving without insurance can mean a fine, penalty points and your vehicle being seized.'],['check',['Insurance (at least third party)','MOT (after 3 years, then yearly)','Vehicle tax (VED)','SORN if kept off the road','V5C registration certificate']]],
+['doc','Penalty points','Points add up quickly.',['If you collect 12 or more points within three years you can be disqualified.','Using a hand-held phone while driving means 6 points and a £200 fine.','Speeding usually means at least 3 points and a fine.','New drivers who reach 6 points within two years of passing lose their licence and must re-take both tests.','Drink-driving usually means a driving ban of at least 12 months.'],['bars',[['Speeding (minimum)',3,12,'#f2b705','3 points'],['Hand-held phone',6,12,'#e07a14','6 points'],['New driver: licence revoked at',6,12,'#d6232a','6 points'],['Disqualified at',12,12,'#d6232a','12 points']]]],
+['inc','Breakdowns','Get safe first, then get help.',['Get your vehicle off the road if you can, as far from traffic as possible.','Switch on hazard lights. Put a warning triangle about 45 metres behind your vehicle if it is safe, but never on a motorway.','Leave the vehicle by the side away from traffic and keep passengers safe.','If you break down on a level crossing, get everyone out and away, then call the railway.','Do not stand between your vehicle and traffic, and keep animals secure.'],['flow',['Pull over safely','Hazard lights on','Get everyone out','Triangle (not on motorways)','Call for help']]],
+['inc','At the scene of a crash','Stay calm and follow the steps.',['Switch off engines and ask people not to smoke. Warn oncoming traffic, for example with hazard lights.','Call 999 or 112 as soon as possible and give your exact location.','Use DR ABC: Danger, Response, Airway, Breathing, Circulation.','Do not move casualties unless they are in danger from fire. Do not remove a motorcyclist\'s helmet unless it is essential.','Apply firm pressure to stop bleeding, and do not give anyone food or drink.'],['flow',['Make it safe','Warn others','Call 999 or 112','First aid','Stay until help comes']]],
+['inc','Fire, tunnels and reporting','Know the rules for emergencies and paperwork.',['If your vehicle catches fire, get everyone out and stay away, then call the fire service.','In a tunnel, use dipped headlights and keep your distance. If you break down, switch on hazards and call for help.','If you are involved in a crash, stop and exchange names, addresses and insurance details.','Report the crash to the police within 24 hours if you did not exchange details or if anyone was injured.','Tell your insurer even if you do not plan to claim.'],['icons',[['🔥','Fire: get out and call 999'],['🚇','Tunnels: dipped lights, never stop'],['📞','Report injuries to police'],['📝','Exchange details']]]],
+['load','Loads and roof racks','A badly loaded vehicle is harder to control.',['Overloading affects steering, braking and tyre wear. Check the weight limits in your handbook.','Put heavy items as low and as close to the middle of the vehicle as possible.','Secure all loads, and make sure nothing sticks out dangerously or hides your lights or number plate.','Roof racks and boxes affect handling and fuel use. Remove them when you do not need them.','Adjust tyre pressures if your handbook recommends it for a heavy load.'],['icons',[['⚖️','Do not overload'],['🧳','Heavy items low and central'],['🪢','Secure everything'],['🏔️','Roof racks: check the limit']]]],
+['load','Towing and trailers','Towing changes how your vehicle behaves.',['Do not exceed the towing weight or nose weight limits in your vehicle handbook.','A trailer needs working lights, a visible number plate and a secure coupling.','If a caravan starts to snake, ease off the accelerator. Do not brake hard or steer sharply.','On motorways with three or more lanes, vehicles towing must not use the right-hand lane.','Allow extra stopping distance and take care when reversing.'],['bars',[['Towing: single carriageway',50,70,'#e07a14','50 mph'],['Towing: dual carriageway',60,70,'#e07a14','60 mph'],['Towing: motorway',60,70,'#e07a14','60 mph'],['Car alone: motorway',70,70,'#1b8a4f','70 mph']]]],
+['load','Passengers and pets','Everyone and everything must be secure.',['The driver must make sure children under 14 are properly restrained.','Passengers should not block your view or stand in the vehicle.','Restrain pets so they cannot distract you or be thrown about in an emergency stop.','Never carry loose heavy items in the cabin. They can become dangerous in a crash.','Make sure everyone gets out on the pavement side where possible.'],['icons',[['👨‍👩‍👧','Everyone belted'],['🧒','Child seats'],['🐕','Restrain pets'],['🧳','Luggage secured']]]]
+];
+
+/* ---- animation engine for the lesson pictures ---- */
+let TV=null,tvRaf=0,TH={g:null,l:null};const READ={};
+function stopTV(){cancelAnimationFrame(tvRaf);TV=null}
+function startTV(spec){stopTV();const cv=$('#tcv');if(!cv)return;const g=cv.getContext('2d'),RM=document.body.classList.contains('rm');TV={spec};const t0=performance.now();
+ const step=now=>{if(!TV)return;try{tdraw(g,spec,RM?4:(now-t0)/1000)}catch(e){console.error(e)}if(!RM)tvRaf=requestAnimationFrame(step)};tvRaf=requestAnimationFrame(step)}
+const rrp=(g,x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()};
+const txt=(g,s,x,y,sz,c,al,b)=>{g.font=(b?'bold ':'')+(sz||16)+'px Segoe UI, Arial';g.fillStyle=c||'#fff';g.textAlign=al||'center';g.fillText(s,x,y)};
+const wrap=(g,s,mw)=>{const w=String(s).split(' '),out=[];let l='';w.forEach(x=>{const t=l?l+' '+x:x;if(l&&g.measureText(t).width>mw){out.push(l);l=x}else l=t});if(l)out.push(l);return out};
+const bgp=g=>{g.fillStyle='#10213b';g.fillRect(0,0,720,300)};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function tdraw(g,s,t){const k=s[0];
+ if(k==='td')dTD(g,s,t);else if(k==='icons')dIcons(g,s[1],t);else if(k==='flow')dFlow(g,s[1],t);else if(k==='check')dCheck(g,s[1],t);
+ else if(k==='bars')dBars(g,s[1],t);else if(k==='clock')dClock(g,s[1],s[2],t);else if(k==='lights')dLights(g,t);else if(k==='stop')dStop(g,t);else if(k==='gap')dGap(g,s[1],t)}
+function dIcons(g,items,t){
+ bgp(g);const n=items.length,cols=n<=3?n:n===4?4:Math.ceil(n/2),rows=Math.ceil(n/cols),cw=680/cols,ch=Math.min(130,270/rows),all=n*.35+.6,pk=Math.floor(Math.max(0,t-all)/1.1)%n;
+ items.forEach((it,i)=>{const r=Math.floor(i/cols),c=i%cols,x=20+c*cw+cw/2,y=24+r*ch+ch/2,s=clamp((t-i*.35)/.5,0,1),e=1+2.70158*Math.pow(s-1,3)+1.70158*Math.pow(s-1,2),hot=t>all&&i===pk;
+  g.save();g.translate(x,y);g.scale(e,e);g.globalAlpha=s;g.fillStyle=hot?'rgba(255,122,61,.35)':'rgba(255,255,255,.08)';rrp(g,-cw/2+8,-ch/2+6,cw-16,ch-12,14);g.fill();
+  if(hot){g.strokeStyle='#ff7a3d';g.lineWidth=3;g.stroke()}
+  g.font=Math.round(ch*.36)+'px Segoe UI Emoji, Apple Color Emoji, sans-serif';g.textAlign='center';g.fillStyle='#fff';g.fillText(it[0],0,-ch*.04);
+  wrap(g,it[1],cw-34).slice(0,3).forEach((l,j)=>txt(g,l,0,ch*.22+j*17,14,'#e9eef7','center',hot));g.restore()});
 }
-function qr(){
- const el=$('#quiz'),it=Q.items[Q.i];
- if(Q.done||!it){const n=Q.items.length;if(!Q.done){Q.done=true;S.quiz.push(Q.sc);if(Q.sc===n)award('quiz')}el.innerHTML='<h2>Quiz complete</h2><div class="big">'+Q.sc+'<small> / '+n+'</small></div><p>'+(Q.sc===n?'Perfect score.':'Review the explanations and try again.')+'</p><button id="qagain">Try again</button>';return}
- el.innerHTML='<p class="mut">Question '+(Q.i+1)+' of '+Q.items.length+'</p>'+(it.svg||'')+'<h2>'+it.q+'</h2><div class="opts">'+it.o.map((t,i)=>'<button data-i="'+i+'">'+t+'</button>').join('')+'</div><div id="qf" aria-live="polite"></div>';
+function dFlow(g,steps,t){
+ bgp(g);const n=steps.length,bw=(680-(n-1)*34)/n,cyc=n*1.3+1.6,tt=t%cyc,act=Math.min(n,Math.floor(tt/1.3));
+ steps.forEach((s,i)=>{const x=20+i*(bw+34),on=i===act,done=i<act,by=96-(on?8:0);
+  g.fillStyle=on?'#d6232a':done?'#1b8a4f':'rgba(255,255,255,.1)';rrp(g,x,by,bw,116,14);g.fill();
+  g.fillStyle='rgba(255,255,255,.25)';g.beginPath();g.arc(x+22,by+22,14,0,7);g.fill();txt(g,done?'✓':String(i+1),x+22,by+28,16,'#fff','center',true);
+  const ls=wrap(g,s,bw-20).slice(0,4);ls.forEach((l,j)=>txt(g,l,x+bw/2,by+66-(ls.length-1)*9.5+j*19,15,'#fff','center',on));
+  if(i<n-1){g.fillStyle=i<act?'#1b8a4f':'rgba(255,255,255,.4)';g.beginPath();g.moveTo(x+bw+8,144);g.lineTo(x+bw+8,164);g.lineTo(x+bw+26,154);g.closePath();g.fill()}});
 }
-$('#quiz').addEventListener('click',e=>{
- if(e.target.id==='qagain')return quiz(Q.mode);
- if(e.target.id==='qnext'){Q.i++;return qr()}
- const b=e.target.closest('[data-i]');if(!b||b.disabled)return;const it=Q.items[Q.i],i=+b.dataset.i;
- $$('#quiz .opts button').forEach((x,k)=>{x.disabled=true;if(k===it.a)x.classList.add('ok')});if(i!==it.a)b.classList.add('bad');else Q.sc++;
- $('#qf').innerHTML='<p><b>'+(i===it.a?'Correct. ':'Not quite. ')+'</b>'+it.why+'</p><button id="qnext">'+(Q.i===Q.items.length-1?'Finish':'Next question')+'</button>';
+function dCheck(g,items,t){
+ bgp(g);const n=items.length,two=n>4,per=two?Math.ceil(n/2):n,cyc=n*.7+2.4,tt=t%cyc;
+ items.forEach((s,i)=>{const col=two?Math.floor(i/per):0,r=two?i%per:i,x=40+col*350,y=44+r*(two?58:50),on=tt>i*.7+.4,p=clamp((tt-i*.7-.4)/.35,0,1);
+  g.fillStyle='rgba(255,255,255,.08)';rrp(g,x,y-22,320,42,10);g.fill();
+  g.strokeStyle='rgba(255,255,255,.5)';g.lineWidth=2;g.beginPath();g.arc(x+24,y,13,0,7);g.stroke();
+  if(on){g.fillStyle='#1b8a4f';g.beginPath();g.arc(x+24,y,13*p,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=3;g.beginPath();g.moveTo(x+18,y);g.lineTo(x+23,y+6);g.lineTo(x+31,y-6);g.stroke()}
+  txt(g,s,x+48,y+6,16,'#fff','left',on)});
+}
+function dBars(g,rows,t){
+ bgp(g);const n=rows.length,cyc=n*.5+4.5,tt=t%cyc,rh=Math.min(70,250/n);
+ rows.forEach((r,i)=>{const y=34+i*rh+rh/2,p=clamp((tt-i*.5)/1.1,0,1),e=1-Math.pow(1-p,3),w=400*(r[1]/r[2])*e;
+  txt(g,r[0],20,y+5,16,'#e9eef7','left');g.fillStyle='rgba(255,255,255,.1)';rrp(g,270,y-14,420,28,8);g.fill();
+  g.fillStyle=r[3];rrp(g,270,y-14,Math.max(8,w),28,8);g.fill();if(p>.5){if(w>100)txt(g,r[4],270+w-8,y+5,14,'#111','right',true);else txt(g,r[4],270+Math.max(8,w)+10,y+5,14,'#fff','left',true)}});
+}
+function dClock(g,main,sub,t){
+ bgp(g);const k=clamp((t%6)/4.5,0,1);g.lineWidth=22;g.strokeStyle='rgba(255,255,255,.12)';g.beginPath();g.arc(190,150,90,0,7);g.stroke();
+ g.strokeStyle='#ff7a3d';g.lineCap='round';g.beginPath();g.arc(190,150,90,-Math.PI/2,-Math.PI/2+Math.PI*2*k);g.stroke();g.lineCap='butt';
+ txt(g,main,190,160,34,'#fff','center',true);wrap(g,sub,300).forEach((l,i)=>txt(g,l,330,130+i*34,24,'#e9eef7','left'));
+ txt(g,k>=1?'Time for a break!':'Driving...',330,230,20,k>=1?'#ff7a3d':'#9fb0cc','left',true);
+}
+function dLights(g,t){
+ bgp(g);const tt=t%8,st=tt<2.5?0:tt<3.5?1:tt<6?2:3;g.fillStyle='#1b1b1b';rrp(g,120,20,100,260,16);g.fill();
+ [[st<=1,'#ff3b3b',70],[st===1||st===3,'#ffb000',150],[st===2,'#2fd070',230]].forEach(l=>{g.fillStyle=l[0]?l[1]:'rgba(255,255,255,.1)';if(l[0]){g.shadowColor=l[1];g.shadowBlur=26}g.beginPath();g.arc(170,l[2],32,0,7);g.fill();g.shadowBlur=0});
+ ['RED: stop and wait behind the line','RED + AMBER: still stop, get ready','GREEN: go if the way is clear','AMBER: stop unless too close to stop safely'].forEach((s,i)=>txt(g,s,270,70+i*56,i===st?20:16,i===st?'#fff':'#7d8ba3','left',i===st));
+}
+function dStop(g,t){
+ bgp(g);const sp=[20,30,40,50,60,70],th=[6,9,12,15,18,21],br=[6,14,24,38,55,75],cl=[3,6,9,13,18,24],cyc=3.6,i=Math.floor(t/cyc)%6,k=1-Math.pow(1-clamp((t%cyc)/1.5,0,1),3),sc=5.6;
+ txt(g,sp[i]+' mph',20,50,38,'#fff','left',true);txt(g,(th[i]+br[i])+' metres overall (about '+cl[i]+' car lengths)',20,82,18,'#ff7a3d','left',true);
+ g.fillStyle='#3b3f47';g.fillRect(0,150,720,60);g.fillStyle='#d6232a';rrp(g,20,166,44,26,6);g.fill();
+ g.fillStyle='#ff9f1a';g.fillRect(70,160,th[i]*sc*k,38);g.fillStyle='#d6232a';g.fillRect(70+th[i]*sc*k,160,br[i]*sc*k,38);
+ txt(g,'Thinking '+th[i]+' m',70,150,14,'#ff9f1a','left',true);txt(g,'Braking '+br[i]+' m',70+th[i]*sc+br[i]*sc/2,225,14,'#ff7a7a','center',true);
+ sp.forEach((s,j)=>{g.fillStyle=j===i?'#ff7a3d':'rgba(255,255,255,.12)';rrp(g,20+j*112,250,100,34,8);g.fill();txt(g,s+' mph',70+j*112,272,15,'#fff','center',j===i)});
+}
+function dGap(g,secs,t){
+ bgp(g);const v=120,ax=600,bx=ax-v*secs,cyc=(760-(bx-30))/v+1.8,tt=t%cyc,px=760-v*tt;
+ g.fillStyle='#3b3f47';g.fillRect(0,120,720,100);g.strokeStyle='#e8e8e8';g.lineWidth=3;g.setLineDash([26,22]);g.lineDashOffset=(tt*v)%48;g.beginPath();g.moveTo(0,170);g.lineTo(720,170);g.stroke();g.setLineDash([]);
+ const car=(x,c)=>{g.fillStyle=c;rrp(g,x-26,150,52,40,8);g.fill();g.fillStyle='rgba(255,255,255,.5)';g.fillRect(x+2,154,14,32)};car(ax,'#2f6fd0');car(bx,'#d6232a');
+ g.fillStyle='#f2b705';g.fillRect(px-3,70,6,50);g.fillRect(px-14,60,28,16);
+ const el=clamp((ax-px)/v,0,secs),on=px<ax;txt(g,(px<=bx?secs:on?el:0).toFixed(1)+' s',20,56,42,'#fff','left',true);
+ txt(g,px<=bx?'Gap: '+secs+' seconds':on?'Counting...':'Pick a marker ahead',20,90,18,'#ff7a3d','left',true);
+ if(secs){g.strokeStyle='#ff7a3d';g.lineWidth=3;g.beginPath();g.moveTo(bx+26,240);g.lineTo(ax-26,240);g.stroke();txt(g,secs+' second gap',(bx+ax)/2,266,18,'#ff7a3d','center',true)}
+}
+/* top-down road scenes */
+function dRoad(g,type,decor){
+ const R='#3b3f47',road=(x,y,w,h)=>{g.fillStyle=R;g.fillRect(x,y,w,h)},dash=(a,b,c,d)=>{g.strokeStyle='#e8e8e8';g.lineWidth=3;g.setLineDash([16,14]);g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke();g.setLineDash([])};
+ g.fillStyle='#2f6b3c';g.fillRect(0,0,720,300);
+ if(decor==='slip'){road(0,16,250,34);g.fillStyle=R;g.beginPath();g.moveTo(250,16);g.lineTo(250,50);g.lineTo(350,50);g.closePath();g.fill()}
+ if(type==='two'||type==='zebra'){road(0,95,720,110);dash(0,150,720,150)}
+ if(type==='zebra'){g.fillStyle='#f2f2f2';for(let i=0;i<8;i++)g.fillRect(330,98+i*13,60,8)}
+ if(type==='cross'){road(0,95,720,110);road(305,0,110,300);dash(0,150,305,150);dash(415,150,720,150);dash(360,0,360,95);dash(360,205,360,300)}
+ if(type==='rbt'){road(0,115,720,70);road(325,0,70,300);g.fillStyle=R;g.beginPath();g.arc(360,150,98,0,7);g.fill();g.fillStyle='#2f6b3c';g.beginPath();g.arc(360,150,42,0,7);g.fill();dash(0,150,262,150);dash(458,150,720,150);dash(360,0,360,52);dash(360,248,360,300)}
+ if(type==='dual'){road(0,50,720,200);g.fillStyle='#2f6b3c';g.fillRect(0,138,720,24);g.fillStyle='#9aa3b2';g.fillRect(0,148,720,4);dash(0,95,720,95);dash(0,205,720,205)}
+}
+function dTD(g,s,t){
+ const actors=s[2],labels=s[3],tt=t%8;dRoad(g,s[1],s[4]);
+ actors.forEach(a=>{const k=a[0],c=a[1],pts=a[2];let i=0;while(i<pts.length-2&&tt>pts[i+1][2])i++;
+  const p=pts[i],q=pts[i+1],u=tt<=p[2]?0:tt>=q[2]?1:(tt-p[2])/(q[2]-p[2]),x=p[0]+(q[0]-p[0])*u,y=p[1]+(q[1]-p[1])*u;
+  let ang=0;for(let j=i;j>=0;j--)if(Math.hypot(pts[j+1][0]-pts[j][0],pts[j+1][1]-pts[j][1])>1){ang=Math.atan2(pts[j+1][1]-pts[j][1],pts[j+1][0]-pts[j][0]);break}
+  if(k==='ped'){g.fillStyle='#f2c200';g.beginPath();g.arc(x,y,11,0,7);g.fill();g.font='20px Segoe UI Emoji, sans-serif';g.textAlign='center';g.fillStyle='#fff';g.fillText('🚶',x,y+7);return}
+  const L=k==='bus'?84:k==='van'||k==='amb'?58:k==='bike'?32:44,Wd=k==='bus'?26:k==='van'||k==='amb'?24:k==='bike'?10:22;
+  g.save();g.translate(x,y);g.rotate(ang);g.fillStyle=k==='amb'?'#f4f4f0':c;rrp(g,-L/2,-Wd/2,L,Wd,k==='bike'?4:6);g.fill();
+  if(k!=='bike'){g.fillStyle='rgba(255,255,255,.55)';g.fillRect(L*.12,-Wd/2+3,L*.2,Wd-6);g.fillStyle='#ffe9a0';g.fillRect(L/2-4,-Wd/2+2,4,5);g.fillRect(L/2-4,Wd/2-7,4,5)}
+  if(k==='bike'){g.fillStyle='#222';g.beginPath();g.arc(0,0,6,0,7);g.fill()}
+  if(k==='amb'){const f=Math.floor(tt*8)%2;g.shadowColor='#2a6bff';g.shadowBlur=14;g.fillStyle=f?'#2a6bff':'#ff3b3b';g.fillRect(-4,-Wd/2,8,Wd);g.shadowBlur=0}
+  g.restore()});
+ labels.forEach(l=>{if(tt>=l[3]&&tt<=l[4]){g.font='bold 16px Segoe UI, Arial';const w=g.measureText(l[0]).width+28;g.fillStyle='rgba(0,0,0,.72)';rrp(g,l[1]-w/2,l[2]-18,w,32,16);g.fill();txt(g,l[0],l[1],l[2]+4,16,'#fff','center',true)}});
+}
+/* ---- views ---- */
+function renderTheory(){
+ stopTV();const b=$('#thBox');
+ if(TH.l!=null){const L=TL[TH.l],G=TG.find(x=>x.id===L[0]);READ[TH.l]=1;
+  b.innerHTML='<div class="crumbs"><button class="sec" data-th="home">← All topics</button><button class="sec" data-th="group">← '+G.n+'</button></div><div class="card tlesson"><h2>'+L[1]+'</h2><p class="mut">'+L[2]+'</p><canvas id="tcv" width="720" height="300" role="img" aria-label="Animated illustration: '+L[1]+'"></canvas><div class="row" style="margin:12px 0"><button class="sec" id="tvr">▶ Replay animation</button><button class="sec" data-th="prev">← Previous lesson</button><button data-th="next">Next lesson →</button></div><h3>Key points</h3><ul class="kp">'+L[3].map((p,i)=>'<li style="--i:'+i+'">'+p+'</li>').join('')+'</ul></div>';
+  startTV(L[4]);
+ }else if(TH.g){const G=TG.find(x=>x.id===TH.g);
+  b.innerHTML='<div class="crumbs"><button class="sec" data-th="home">← All topics</button></div><h2>'+G.i+' '+G.n+'</h2><p class="mut">'+G.d+'</p><div class="groups">'+TL.map((l,i)=>[l,i]).filter(x=>x[0][0]===TH.g).map((x,j)=>'<button class="gcard" data-tl="'+x[1]+'" style="--i:'+j+'"><span class="gi">'+G.i+'</span><b>'+x[0][1]+'</b><span class="mut">'+x[0][2]+'</span><span class="go">'+(READ[x[1]]?'✓ Learned. Watch again →':'Start lesson →')+'</span></button>').join('')+'</div>';
+ }else{
+  b.innerHTML='<h2>Theory topics</h2><p class="mut">The 14 topic areas of the car theory test. Pick a topic, then a lesson. Each one has an animated picture and the key points to remember. For every road sign, use the Sign library tab.</p><div class="groups">'+TG.map((g,i)=>{const ls=TL.map((l,k)=>[l,k]).filter(x=>x[0][0]===g.id),dn=ls.filter(x=>READ[x[1]]).length;return'<button class="gcard" data-tg="'+g.id+'" style="--i:'+i+'"><span class="gi">'+g.i+'</span><b>'+g.n+'</b><span class="mut">'+g.d+'</span><span class="gm">'+ls.length+' lessons · '+dn+' learned</span><span class="go">Open topic →</span></button>'}).join('')+'</div>';
+ }
+}
+$('#thBox').addEventListener('click',e=>{
+ const tg=e.target.closest('[data-tg]'),tl=e.target.closest('[data-tl]'),a=e.target.closest('[data-th]');
+ if(tg){TH.g=tg.dataset.tg;TH.l=null;renderTheory();window.scrollTo(0,0)}
+ else if(tl){TH.l=+tl.dataset.tl;TH.g=TL[TH.l][0];renderTheory();window.scrollTo(0,0)}
+ else if(e.target.id==='tvr'&&TH.l!=null)startTV(TL[TH.l][4]);
+ else if(a){const v=a.dataset.th;if(v==='home'){TH.g=null;TH.l=null}else if(v==='group')TH.l=null;else{const n=TL.length;TH.l=(TH.l+(v==='next'?1:-1)+n)%n;TH.g=TL[TH.l][0]}renderTheory();window.scrollTo(0,0)}
 });
+let Q={mode:'theory'};
+function quiz(mode){
+ Q.mode=mode;const cat=$('#sigCat').value,pool=SGL.filter(s=>cat==='All'||s.c===cat);
+ $$('[data-mode]').forEach(b=>b.setAttribute('aria-selected',b.dataset.mode===mode));
+ $('#sigBar').classList.toggle('hidden',mode!=='lib');$('#thBox').classList.toggle('hidden',mode!=='theory');$('#quiz').classList.toggle('hidden',mode!=='lib');
+ if(mode==='theory'){renderTheory();return}
+ stopTV();
+ $('#quiz').innerHTML='<div class="lib">'+pool.map((s,i)=>'<div class="sg flip" style="--i:'+(i%24)+'" tabindex="0"><div class="fi"><div class="ff">'+svgOf(s,'sign sm')+'<b>'+s.n+'</b><span class="mut">Hover to flip</span></div><div class="fb"><b>'+s.n+'</b><span>'+s.d+'</span></div></div></div>').join('')+'</div>';
+}
 
 /* ---------- wiring ---------- */
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>b.dataset.go==='practice'?start():show(b.dataset.go)));

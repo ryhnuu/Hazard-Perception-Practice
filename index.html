@@ -16,9 +16,8 @@
       <button data-go="home">Home</button>
       <button data-go="practice">Practice</button>
       <button data-go="hazards">Hazards</button>
-      <button data-go="learn">Learn</button>
-      <button data-go="exam">Mock exam</button>
-      <button data-go="theory">Theory and signs</button>
+      <button data-go="exam">Mock Exam</button>
+      <button data-go="theory">Theory and Signs</button>
       <button data-go="profile">Profile</button>
     </nav>
     <div class="ctl">
@@ -50,13 +49,27 @@
     <div class="card tilt rv"><b>3. Learn</b><p>See your reaction time against the scoring window. If you miss full marks, an animated replay shows when to flag.</p></div>
   </div>
   <div class="ticker"><b>Tip</b><span id="tick"></span></div>
-  <p class="mut">Also included: theory questions, a road sign library and quiz, and a profile with streaks and badges. This is a practice tool, not an official DVSA product.</p>
+  <p class="mut">Also included: animated theory lessons, a road sign library, a mock exam and a profile with streaks and badges. This is a practice tool, not an official DVSA product.</p>
 </section>
 
 <section id="hazards" class="screen hidden">
-  <h1 style="font-size:2rem">Hazard practice</h1>
-  <p class="mut">Pick a group to practise only those hazards. Each group runs every clip in it, one after another, and shows the road signs you drove past.</p>
-  <div class="groups" id="groups"></div>
+  <h1 style="font-size:2rem">Hazards</h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="htP" aria-selected="true" data-ht="practice">Hazard practice</button>
+    <button role="tab" id="htL" aria-selected="false" data-ht="learn">Hazard Learning</button>
+  </div>
+  <div id="hpPractice">
+    <h2>Hazard practice</h2>
+    <p class="mut">Pick a group to practise only those hazards. Each group runs every clip in it, one after another, and shows the road signs you drove past.</p>
+    <div class="groups" id="groups"></div>
+  </div>
+  <div id="hpLearn" class="hidden">
+    <h2>Learn when to press Space</h2>
+    <p class="mut">Pick a lesson and watch the clip play with the perfect timing: when to watch, when to press and how the points drop as time passes.</p>
+    <div class="card"><b>The golden rules</b><p style="margin:6px 0 0">A developing hazard is something that makes you change speed or direction. Look for the clue first, press as soon as it starts to develop, press once or twice only, and do not press for things that stay put.</p></div>
+    <div class="chips" id="lchips"></div>
+    <div class="groups" id="lessons"></div>
+  </div>
 </section>
 
 <section id="clip" class="screen hidden">
@@ -89,14 +102,6 @@
   </div>
 </section>
 
-<section id="learn" class="screen hidden">
-  <h1 style="font-size:2rem">Learn when to press Space</h1>
-  <p class="mut">Pick a lesson and watch the clip play with the perfect timing: when to watch, when to press and how the points drop as time passes.</p>
-  <div class="card"><b>The golden rules</b><p style="margin:6px 0 0">A developing hazard is something that makes you change speed or direction. Look for the clue first, press as soon as it starts to develop, press once or twice only, and do not press for things that stay put.</p></div>
-  <div class="chips" id="lchips"></div>
-  <div class="groups" id="lessons"></div>
-</section>
-
 <section id="exam" class="screen hidden"><div id="examBox"></div></section>
 
 <section id="results" class="screen hidden">
@@ -113,14 +118,14 @@
 </section>
 
 <section id="theory" class="screen hidden">
-  <h1 style="font-size:2rem">Theory and signs</h1>
+  <h1 style="font-size:2rem">Theory and Signs</h1>
   <div class="tabs" role="tablist">
-    <button role="tab" id="tabT" aria-selected="true" data-mode="theory">Theory questions</button>
-    <button role="tab" id="tabS" aria-selected="false" data-mode="signs">Sign quiz</button>
+    <button role="tab" id="tabT" aria-selected="true" data-mode="theory">Theory</button>
     <button role="tab" id="tabL" aria-selected="false" data-mode="lib">Sign library</button>
   </div>
   <div id="sigBar" class="hidden" style="margin-bottom:12px"><label>Category <select id="sigCat"><option>All</option><option>Regulatory</option><option>Mandatory</option><option>Warning</option><option>Information</option></select></label></div>
-  <div class="card" id="quiz"></div>
+  <div id="thBox"></div>
+  <div class="card hidden" id="quiz"></div>
 </section>
 
 <section id="profile" class="screen hidden">
