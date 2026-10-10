@@ -8,12 +8,16 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div id="sp"></div>
 <header>
   <div class="bar1">
     <b class="brand">🚦 Hazard Ready</b>
     <nav aria-label="Main">
       <button data-go="home">Home</button>
       <button data-go="practice">Practice</button>
+      <button data-go="hazards">Hazards</button>
+      <button data-go="learn">Learn</button>
+      <button data-go="exam">Mock exam</button>
       <button data-go="theory">Theory and signs</button>
       <button data-go="profile">Profile</button>
     </nav>
@@ -31,12 +35,12 @@
 <main id="main">
 <section id="home" class="screen">
   <div class="hero">
+    <div class="road"></div><span class="car" aria-hidden="true">🚗</span>
     <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-    <div class="ring3d" id="ring" aria-hidden="true"></div>
     <span class="pill">DVSA-style hazard perception practice</span>
     <h1>Spot the <span id="rot" class="grad">hazard</span> before it becomes one.</h1>
     <p>Watch the road from the driver's seat, press Space the moment a hazard starts to develop, and see exactly how early you reacted. Learn every road sign along the way.</p>
-    <div class="row"><button class="cta" data-start>Start free practice</button><button class="ghost" data-go="theory">Browse road signs</button></div>
+    <div class="row"><button class="cta" data-start>Start free practice</button><button class="ghost" data-go="exam">Take a mock exam</button><button class="ghost" data-go="theory">Browse road signs</button></div>
     <div class="hstats"><div><b data-cnt="clips">0</b><span>practice clips</span></div><div><b data-cnt="signs">0</b><span>road signs</span></div><div><b data-cnt="theory">0</b><span>theory questions</span></div></div>
   </div>
   <h2>How it works</h2>
@@ -45,7 +49,14 @@
     <div class="card tilt rv"><b>2. Press Space</b><p>Flag the hazard as soon as you think it will make you slow down or change direction. Earlier means more points, up to 5.</p></div>
     <div class="card tilt rv"><b>3. Learn</b><p>See your reaction time against the scoring window. If you miss full marks, an animated replay shows when to flag.</p></div>
   </div>
+  <div class="ticker"><b>Tip</b><span id="tick"></span></div>
   <p class="mut">Also included: theory questions, a road sign library and quiz, and a profile with streaks and badges. This is a practice tool, not an official DVSA product.</p>
+</section>
+
+<section id="hazards" class="screen hidden">
+  <h1 style="font-size:2rem">Hazard practice</h1>
+  <p class="mut">Pick a group to practise only those hazards. Each group runs every clip in it, one after another, and shows the road signs you drove past.</p>
+  <div class="groups" id="groups"></div>
 </section>
 
 <section id="clip" class="screen hidden">
@@ -56,10 +67,16 @@
   </div>
   <div id="flags" aria-hidden="true"></div>
   <div id="capt"></div>
-  <div id="live" class="card"><b>Press Space</b> as soon as you see a developing hazard. Hints are only shown after the clip.</div>
+  <div id="live" class="card"><span class="kbd sm">Space</span> <b>Press Space</b> as soon as you see a developing hazard. Hints are only shown after the clip.</div>
+  <div id="lesson" class="card hidden">
+    <div class="row"><div id="kbd" class="kbd">Space</div><div><div id="dPhase" class="dphase">Watch the road and look for clues</div><div class="mut" id="dSub">Something may be about to develop.</div></div><div class="dpts"><span id="dPts">–</span><small>points available</small></div></div>
+    <div class="tl" id="dtl"></div>
+    <h3 id="dTitle"></h3><p id="dWhy"></p><p id="dTip"></p><div id="dSigns"></div>
+    <div class="row"><button id="dReplay" class="sec">Watch again</button><label>Speed <input type="range" id="dspd" min="0.25" max="1" step="0.25" value="1"> <span id="dspdv">1x</span></label><button id="dTry">Practise this clip</button><button id="dNext" class="sec">Next lesson</button></div>
+  </div>
   <div id="rev" class="card hidden">
     <h2 id="rvTitle"></h2>
-    <div class="big"><span id="rvScore">0</span><small> / 5</small></div>
+    <div class="row"><svg id="sring" viewBox="0 0 120 120" width="110" height="110" aria-hidden="true"><defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d6232a"/><stop offset="1" stop-color="#ff7a3d"/></linearGradient></defs><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="10"/><circle id="sarc" cx="60" cy="60" r="52" fill="none" stroke="url(#gr)" stroke-width="10" stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327" transform="rotate(-90 60 60)"/></svg><div class="big"><span id="rvScore">0</span><small> / <span id="rvMax">5</span></small></div></div>
     <p id="rvMsg" style="margin-top:8px"></p>
     <table><tbody id="rvTable"></tbody></table>
     <div class="tl" id="tl"></div>
@@ -67,20 +84,32 @@
     <div class="row"><button id="replay" class="sec">Replay</button><label>Slow motion <input type="range" id="spd" min="0.25" max="1" step="0.25" value="0.5"> <span id="spdv">0.5x</span></label></div>
     <p id="rvTip" style="margin-top:12px"></p>
     <div id="rvSigns"></div>
+    <div id="rvSignQ"></div>
     <button id="next">Next clip</button>
   </div>
 </section>
 
+<section id="learn" class="screen hidden">
+  <h1 style="font-size:2rem">Learn when to press Space</h1>
+  <p class="mut">Pick a lesson and watch the clip play with the perfect timing: when to watch, when to press and how the points drop as time passes.</p>
+  <div class="card"><b>The golden rules</b><p style="margin:6px 0 0">A developing hazard is something that makes you change speed or direction. Look for the clue first, press as soon as it starts to develop, press once or twice only, and do not press for things that stay put.</p></div>
+  <div class="chips" id="lchips"></div>
+  <div class="groups" id="lessons"></div>
+</section>
+
+<section id="exam" class="screen hidden"><div id="examBox"></div></section>
+
 <section id="results" class="screen hidden">
   <div id="cert" class="card">
-    <h2>Hazard perception practice certificate</h2>
+    <h2 id="cTitle">Hazard perception practice certificate</h2>
     <p class="mut" style="margin:0 auto 12px">Awarded to <b>Learner</b> on <span id="cDate"></span></p>
     <div class="big"><span id="fTotal">0</span><small> / <span id="fMax"></span></small></div>
     <p id="fVerdict" style="margin:8px auto"></p>
     <div id="fRows"></div>
+    <div id="fMore" style="text-align:left;margin-top:12px"></div>
     <p class="mut" style="margin:12px auto 0;font-size:.8rem">Practice result only. Not an official DVSA certificate.</p>
   </div>
-  <div class="row"><button id="print">Print certificate</button><button class="sec" data-start>Try again</button><button class="sec" data-go="profile">View profile</button></div>
+  <div class="row"><button id="print">Print certificate</button><button class="sec" id="again">Try again</button><button class="sec" data-go="hazards">Choose a hazard group</button><button class="sec" data-go="profile">View profile</button></div>
 </section>
 
 <section id="theory" class="screen hidden">
