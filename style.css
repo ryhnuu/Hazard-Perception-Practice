@@ -95,3 +95,18 @@ nav button:hover{background:rgba(214,35,42,.1);box-shadow:none}
 .opts button{transition:transform .2s,border-color .2s,background .2s}.opts button:hover:not(:disabled){transform:translateX(6px);border-color:var(--red)}
 .screen.enter{animation:in .5s cubic-bezier(.2,.8,.2,1)}
 .meter i{background:var(--g)}#steps i.cur{animation:pulse 1.2s infinite}@keyframes pulse{50%{opacity:.45}}
+
+/* v4: 3D layer */
+.hero p{max-width:52ch}
+.hero .ring3d{position:absolute;right:110px;top:90px;width:120px;height:120px;perspective:900px;z-index:1}
+.ring3d .rot{position:absolute;inset:0;transform-style:preserve-3d;animation:spin 18s linear infinite}
+.ring3d .it{position:absolute;inset:0;transform:rotateY(calc(var(--i)*45deg)) translateZ(215px)}
+.ring3d .sign{width:120px;height:120px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+.ring3d:hover .rot{animation-play-state:paused}
+@keyframes spin{from{transform:rotateX(-14deg) rotateY(0)}to{transform:rotateX(-14deg) rotateY(360deg)}}
+.sg.flip{padding:0;perspective:900px;height:190px;background:none;border:0}.sg.flip:hover{box-shadow:none}
+.fi{position:relative;width:100%;height:100%;transition:transform .7s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
+.sg.flip:hover .fi,.sg.flip:focus .fi{transform:rotateY(180deg)}
+.ff,.fb{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--card)}
+.fb{transform:rotateY(180deg);background:var(--g);color:#fff;border:0}.fb span{color:#fff;font-size:.9rem}
+body.rm .ring3d .rot{animation:none!important}
