@@ -31,17 +31,20 @@
 <main id="main">
 <section id="home" class="screen">
   <div class="hero">
-    <h1>Spot the hazard before it becomes one.</h1>
-    <p>Practise hazard perception the way the real driving theory test does it: watch the road from the driver's seat, press Space the moment a hazard starts to develop, and see exactly how early you reacted.</p>
-    <button class="cta" data-start>Start free practice</button>
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+    <span class="pill">DVSA-style hazard perception practice</span>
+    <h1>Spot the <span id="rot" class="grad">hazard</span> before it becomes one.</h1>
+    <p>Watch the road from the driver's seat, press Space the moment a hazard starts to develop, and see exactly how early you reacted. Learn every road sign along the way.</p>
+    <div class="row"><button class="cta" data-start>Start free practice</button><button class="ghost" data-go="theory">Browse road signs</button></div>
+    <div class="hstats"><div><b data-cnt="clips">0</b><span>practice clips</span></div><div><b data-cnt="signs">0</b><span>road signs</span></div><div><b data-cnt="theory">0</b><span>theory questions</span></div></div>
   </div>
   <h2>How it works</h2>
   <div class="how">
-    <div class="card"><b>1. Watch</b><p>Four clips in different light and weather. Most contain one developing hazard. One is a decoy with none.</p></div>
-    <div class="card"><b>2. Press Space</b><p>Flag the hazard as soon as you think it will make you slow down or change direction. Earlier means more points, up to 5.</p></div>
-    <div class="card"><b>3. Learn</b><p>See your reaction time against the scoring window. If you miss full marks, an animated replay shows when to flag.</p></div>
+    <div class="card tilt rv"><b>1. Watch</b><p>Eight random clips from a growing bank, in different light and weather. Most contain one developing hazard and some are decoys with none.</p></div>
+    <div class="card tilt rv"><b>2. Press Space</b><p>Flag the hazard as soon as you think it will make you slow down or change direction. Earlier means more points, up to 5.</p></div>
+    <div class="card tilt rv"><b>3. Learn</b><p>See your reaction time against the scoring window. If you miss full marks, an animated replay shows when to flag.</p></div>
   </div>
-  <p class="mut">Also included: theory questions, a road signs trainer and a profile with streaks and badges. This is a practice tool, not an official DVSA product.</p>
+  <p class="mut">Also included: theory questions, a road sign library and quiz, and a profile with streaks and badges. This is a practice tool, not an official DVSA product.</p>
 </section>
 
 <section id="clip" class="screen hidden">
@@ -62,6 +65,7 @@
     <p class="mut" style="font-size:.85rem">Bands show the scoring window (5 to 1 points). Black lines are your flags. The red line is the replay.</p>
     <div class="row"><button id="replay" class="sec">Replay</button><label>Slow motion <input type="range" id="spd" min="0.25" max="1" step="0.25" value="0.5"> <span id="spdv">0.5x</span></label></div>
     <p id="rvTip" style="margin-top:12px"></p>
+    <div id="rvSigns"></div>
     <button id="next">Next clip</button>
   </div>
 </section>
@@ -82,8 +86,10 @@
   <h1 style="font-size:2rem">Theory and signs</h1>
   <div class="tabs" role="tablist">
     <button role="tab" id="tabT" aria-selected="true" data-mode="theory">Theory questions</button>
-    <button role="tab" id="tabS" aria-selected="false" data-mode="signs">Road signs</button>
+    <button role="tab" id="tabS" aria-selected="false" data-mode="signs">Sign quiz</button>
+    <button role="tab" id="tabL" aria-selected="false" data-mode="lib">Sign library</button>
   </div>
+  <div id="sigBar" class="hidden" style="margin-bottom:12px"><label>Category <select id="sigCat"><option>All</option><option>Regulatory</option><option>Mandatory</option><option>Warning</option><option>Information</option></select></label></div>
   <div class="card" id="quiz"></div>
 </section>
 
