@@ -42,6 +42,14 @@
     <div class="row"><button class="cta" data-start>Start free practice</button><button class="ghost" data-go="exam">Take a mock exam</button><button class="ghost" data-go="theory">Browse road signs</button></div>
     <div class="hstats"><div><b data-cnt="clips">0</b><span>practice clips</span></div><div><b data-cnt="signs">0</b><span>road signs</span></div><div><b data-cnt="theory">0</b><span>theory questions</span></div></div>
   </div>
+  <h2>What would you like to do?</h2>
+  <div class="hometiles">
+    <button class="hometile" data-go="practice" style="--i:0"><span class="ht-ico">🎲</span><b>Practice</b><span class="mut">A random mix of hazard clips and questions</span></button>
+    <button class="hometile" data-go="hazards" style="--i:1"><span class="ht-ico">⚠️</span><b>Hazards</b><span class="mut">Practise by group or learn when to press</span></button>
+    <button class="hometile" data-go="theory" style="--i:2"><span class="ht-ico">📘</span><b>Theory and Signs</b><span class="mut">Lessons, sign library and topic quizzes</span></button>
+    <button class="hometile" data-go="exam" style="--i:3"><span class="ht-ico">📝</span><b>Mock Exam</b><span class="mut">The full test, step by step</span></button>
+    <button class="hometile" data-go="profile" style="--i:4"><span class="ht-ico">📊</span><b>Profile</b><span class="mut">Scores, streaks and badges</span></button>
+  </div>
   <h2>How it works</h2>
   <div class="how">
     <div class="card tilt rv"><b>1. Mix it up</b><p>Practice gives you a random mix of hazard clips, theory questions and road sign questions, like the real test. Use Hazards or Practice Theory to focus on one topic.</p></div>
@@ -54,11 +62,16 @@
 
 <section id="hazards" class="screen hidden">
   <h1 style="font-size:2rem">Hazards</h1>
-  <div class="tabs" role="tablist">
-    <button role="tab" id="htP" aria-selected="true" data-ht="practice">Hazard practice</button>
-    <button role="tab" id="htL" aria-selected="false" data-ht="learn">Hazard Learning</button>
+  <div id="hzHub">
+    <p class="hubprompt">Choose what you want to do <span class="hubkeys">Press 1 or 2</span></p>
+    <div class="hub">
+      <button class="hubcard" data-ht="practice" style="--i:0"><kbd>1</kbd><span class="rib hidden"></span><span class="hubico">🎯</span><b>Hazard practice</b><span class="mut">Pick a hazard group and practise just those clips. See your score, the signs you passed and exactly when you should have pressed.</span><span class="hubmeta" id="hmP"></span><span class="hubgo">Open hazard practice <i>→</i></span></button>
+      <button class="hubcard" data-ht="learn" style="--i:1"><kbd>2</kbd><span class="rib hidden"></span><span class="hubico">🎓</span><b>Hazard Learning</b><span class="mut">Watch animated lessons that show exactly when to press Space, and how the points drop the longer you wait.</span><span class="hubmeta" id="hmL"></span><span class="hubgo">Open Hazard Learning <i>→</i></span></button>
+    </div>
   </div>
-  <div id="hpPractice">
+  <div id="hzPane" class="hidden">
+    <div class="crumbbar"><button class="back" data-ht="hub">← Hazards</button><span class="crumbtxt" id="hzCrumb"></span><button class="swbtn" id="hzSwitch" data-ht="learn">Go to Hazard Learning →</button></div>
+    <div id="hpPractice">
     <h2>Hazard practice</h2>
     <p class="mut">Pick a group to practise only those hazards. Each group runs every clip in it, one after another, and shows the road signs you drove past.</p>
     <div class="groups" id="groups"></div>
@@ -69,6 +82,8 @@
     <div class="card"><b>The golden rules</b><p style="margin:6px 0 0">A developing hazard is something that makes you change speed or direction. Look for the clue first, press as soon as it starts to develop, press once or twice only, and do not press for things that stay put.</p></div>
     <div class="chips" id="lchips"></div>
     <div class="groups" id="lessons"></div>
+  </div>
+
   </div>
 </section>
 
@@ -118,20 +133,26 @@
     <div id="fMore" style="text-align:left;margin-top:12px"></div>
     <p class="mut" style="margin:12px auto 0;font-size:.8rem">Practice result only. Not an official DVSA certificate.</p>
   </div>
-  <div class="row"><button id="print">Print certificate</button><button class="sec" id="again">Try again</button><button class="sec" data-go="hazards">Choose a hazard group</button><button class="sec" data-go="profile">View profile</button></div>
+  <div class="row"><button id="print">Print certificate</button><button class="sec" id="again">Try again</button><button class="sec" data-go="hazards" data-pane="practice">Choose a hazard group</button><button class="sec" data-go="profile">View profile</button></div>
 </section>
 
 <section id="theory" class="screen hidden">
   <h1 style="font-size:2rem">Theory and Signs</h1>
-  <div class="tabs" role="tablist">
-    <button role="tab" id="tabT" aria-selected="true" data-mode="theory">Theory Learning</button>
-    <button role="tab" id="tabL" aria-selected="false" data-mode="lib">Sign Library</button>
-    <button role="tab" id="tabP" aria-selected="false" data-mode="prac">Practice Theory</button>
+  <div id="thHub">
+    <p class="hubprompt">Choose what you want to do <span class="hubkeys">Press 1, 2 or 3</span></p>
+    <div class="hub three">
+      <button class="hubcard" data-mode="theory" style="--i:0"><kbd>1</kbd><span class="rib hidden"></span><span class="hubico">📖</span><b>Theory Learning</b><span class="mut">Animated lessons that explain every topic of the car theory test, one small lesson at a time.</span><span class="hubmeta" id="thmT"></span><span class="hubgo">Open Theory Learning <i>→</i></span></button>
+      <button class="hubcard" data-mode="lib" style="--i:1"><kbd>2</kbd><span class="rib hidden"></span><span class="hubico">🛑</span><b>Sign Library</b><span class="mut">Browse every road sign. Hover over a sign to flip it and see what it means and what to do.</span><span class="hubmeta" id="thmL"></span><span class="hubgo">Open Sign Library <i>→</i></span></button>
+      <button class="hubcard" data-mode="prac" style="--i:2"><kbd>3</kbd><span class="rib hidden"></span><span class="hubico">📝</span><b>Practice Theory</b><span class="mut">Exam-style questions on each topic. Finish a quiz to see what you got right, what you got wrong and why.</span><span class="hubmeta" id="thmP"></span><span class="hubgo">Open Practice Theory <i>→</i></span></button>
+    </div>
   </div>
-  <div id="sigBar" class="hidden" style="margin-bottom:12px"><label>Category <select id="sigCat"><option>All</option><option>Regulatory</option><option>Mandatory</option><option>Warning</option><option>Information</option></select></label></div>
-  <div id="thBox"></div>
-  <div class="card hidden" id="quiz"></div>
-  <div id="ptBox" class="hidden"></div>
+  <div id="thPane" class="hidden">
+    <div class="crumbbar"><button class="back" data-mode="hub">← Theory and Signs</button><span class="crumbtxt" id="thCrumb"></span><button class="swbtn" id="thNext" data-mode="prac">Test yourself: Practice Theory →</button></div>
+    <div id="sigBar" class="hidden" style="margin-bottom:12px"><label>Category <select id="sigCat"><option>All</option><option>Regulatory</option><option>Mandatory</option><option>Warning</option><option>Information</option></select></label></div>
+    <div id="thBox"></div>
+    <div class="card hidden" id="quiz"></div>
+    <div id="ptBox" class="hidden"></div>
+  </div>
 </section>
 
 <section id="profile" class="screen hidden">

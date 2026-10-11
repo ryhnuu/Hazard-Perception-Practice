@@ -5,7 +5,7 @@ const cv=$('#cv'),ctx=cv.getContext('2d'),W=800,H=450,HY=165,CX=400,FOC=14,ROAD=
 const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
 
 /* Session-only state (nothing is stored in the browser; a refresh clears it) */
-const S={hist:[],att:[],quiz:[],sq:[],tq:[],streak:0,best:0,badges:{}};
+const S={hist:[],att:[],quiz:[],sq:[],tq:[],lw:0,streak:0,best:0,badges:{}};
 const BADGES={first:['🏁','First clip','Complete any clip'],perfect:['🎯','Perfect 5','Score 5 out of 5 on a clip'],streak5:['🔥','Hot streak','5 clips in a row scoring 4 or more'],decoy:['🛡️','Cool head','Leave a decoy clip unflagged'],mock:['🏆','Test passed','Pass a full practice test'],quiz:['📘','Quiz ace','Score 100% in a theory topic quiz']};
 
 /* Road signs: [id, name, shape, symbol, meaning and action, category] */
@@ -511,6 +511,7 @@ function show(id){
  if(id!=='clip'){P.run=false;cancelAnimationFrame(raf)}
  if(id!=='clip'&&id!=='results'&&id!=='qs')$('#steps').classList.add('hidden');
  const sw=$('#sw');sw.classList.remove('go');void sw.offsetWidth;sw.classList.add('go');
+ if(id!=='qs')$('#qsBox').innerHTML='';if(id!=='mix')$('#mixBox').innerHTML='';if(id!=='theory')$('#ptBox').innerHTML='';
  $$('.screen').forEach(s=>s.classList.add('hidden'));const el=$('#'+id);el.classList.remove('hidden','enter');void el.offsetWidth;el.classList.add('enter');
  $$('nav button').forEach(b=>b.removeAttribute('aria-current'));const nb=$('nav [data-go="'+(id==='qs'||id==='mix'?'practice':id==='clip'||id==='results'?(M.exam?'exam':(M.lesson||M.grp)?'hazards':'practice'):id)+'"]');if(nb)nb.setAttribute('aria-current','page');
  if(id==='profile')profile();if(id==='hazards')hazTab(HT);if(id==='exam')examIntro();if(id==='theory')quiz(Q.mode);window.scrollTo(0,0);
@@ -550,7 +551,7 @@ function renderLearn(){
 $('#lchips').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){LF=b.dataset.f;renderLearn()}});
 $('#lessons').addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(b)startLesson(b.dataset.l)});
 function startLesson(id){
- HT='learn';const c=CLIPS.find(x=>x.id===id);M={i:0,res:[],mx:[],on:true,grp:null,exam:false,lesson:true,list:[c]};clicks=[];
+ HT='learn';S.lw++;const c=CLIPS.find(x=>x.id===id);M={i:0,res:[],mx:[],on:true,grp:null,exam:false,lesson:true,list:[c]};clicks=[];
  if(document.activeElement)document.activeElement.blur();
  $('#clipLbl').textContent='Lesson: '+c.title;$('#speedLbl').textContent=c.mph+' mph';
  $('#capt').textContent=c.cap;$('#capt').classList.toggle('hidden',!$('#cc').checked);
@@ -650,9 +651,28 @@ $('#examBox').addEventListener('click',e=>{
 });
 
 /* ---------- hazards: two tabs ---------- */
-let HT='practice';
-function hazTab(t){HT=t;$('#htP').setAttribute('aria-selected',t==='practice');$('#htL').setAttribute('aria-selected',t==='learn');$('#hpPractice').classList.toggle('hidden',t!=='practice');$('#hpLearn').classList.toggle('hidden',t!=='learn');if(t==='practice')renderHazards();else renderLearn()}
-$$('[data-ht]').forEach(b=>b.addEventListener('click',()=>hazTab(b.dataset.ht)));
+let HT='hub';
+function hazTab(t){
+ HT=t;const hub=t==='hub';$('#hzHub').classList.toggle('hidden',!hub);$('#hzPane').classList.toggle('hidden',hub);
+ if(hub){renderHzHub();return}
+ $('#hpPractice').classList.toggle('hidden',t!=='practice');$('#hpLearn').classList.toggle('hidden',t!=='learn');
+ $('#hzCrumb').innerHTML='Hazards › <b>'+(t==='practice'?'Hazard practice':'Hazard Learning')+'</b>';
+ const sw=$('#hzSwitch');sw.dataset.ht=t==='practice'?'learn':'practice';sw.textContent=t==='practice'?'Go to Hazard Learning →':'Go to Hazard practice →';
+ if(t==='practice')renderHazards();else renderLearn();
+}
+function rib(sel,txt){const r=$(sel+' .rib');r.textContent=txt||'';r.classList.toggle('hidden',!txt)}
+function renderHzHub(){
+ const n=S.hist.length;$('#hmP').textContent=GROUPS.length+' groups · '+CLIPS.length+' clips'+(n?' · '+n+' done this session':'');
+ $('#hmL').textContent=CLIPS.length+' lessons'+(S.lw?' · '+S.lw+' watched':'');
+ rib('#hzHub [data-ht="learn"]',!n&&!S.lw?'Start here':'');rib('#hzHub [data-ht="practice"]',!n&&S.lw>0?'Try this next':'');
+}
+$$('[data-ht]').forEach(b=>b.addEventListener('click',()=>{hazTab(b.dataset.ht);window.scrollTo(0,0)}));
+document.addEventListener('keydown',e=>{
+ const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='select'||tag==='textarea')return;
+ const vis=id=>!$('#'+id).classList.contains('hidden');
+ if(vis('hazards')){if(HT==='hub'&&/^[12]$/.test(e.key)){const c=$$('#hzHub .hubcard')[+e.key-1];if(c)c.click()}else if(e.key==='Escape'&&HT!=='hub')hazTab('hub')}
+ else if(vis('theory')){if(Q.mode==='hub'&&/^[123]$/.test(e.key)){const c=$$('#thHub .hubcard')[+e.key-1];if(c)c.click()}else if(e.key==='Escape'&&Q.mode!=='hub'&&!$('#ptBox .opts'))quiz('hub')}
+});
 /* ---------- Theory and Signs: Theory (animated lessons) + Sign library ---------- */
 const TG=[
 {id:'alert',n:'Alertness',i:'👀',d:'Stay observant, avoid distractions and know when you are unfit to drive.'},
@@ -848,15 +868,26 @@ $('#thBox').addEventListener('click',e=>{
  else if(a){const v=a.dataset.th;if(v==='home'){TH.g=null;TH.l=null}else if(v==='group')TH.l=null;else{const n=TL.length;TH.l=(TH.l+(v==='next'?1:-1)+n)%n;TH.g=TL[TH.l][0]}renderTheory();window.scrollTo(0,0)}
 });
 let Q={mode:'theory'};
+function renderThHub(){
+ const rd=Object.keys(READ).length,tq=S.tq.filter(x=>x.g!=='mix').length;
+ $('#thmT').textContent=TL.length+' lessons in '+TG.length+' topics'+(rd?' · '+rd+' learned':'');
+ $('#thmL').textContent=SGL.length+' road signs to browse';
+ $('#thmP').textContent=TG.length+' topics'+(tq?' · '+tq+' quiz'+(tq>1?'zes':'')+' taken':'');
+ rib('#thHub [data-mode="theory"]',!rd?'Start here':'');rib('#thHub [data-mode="prac"]',rd>0&&!tq?'Try this next':'');
+}
 function quiz(mode){
- Q.mode=mode;const cat=$('#sigCat').value,pool=SGL.filter(s=>cat==='All'||s.c===cat);
- $$('[data-mode]').forEach(b=>b.setAttribute('aria-selected',b.dataset.mode===mode));
+ Q.mode=mode;const hub=mode==='hub';
+ $('#thHub').classList.toggle('hidden',!hub);$('#thPane').classList.toggle('hidden',hub);
+ if(hub){stopTV();QS=null;renderThHub();return}
+ const nm={theory:'Theory Learning',lib:'Sign Library',prac:'Practice Theory'},nx={theory:['prac','Test yourself: Practice Theory →'],lib:['theory','Learn the theory: Theory Learning →'],prac:['theory','Review in Theory Learning →']};
+ $('#thCrumb').innerHTML='Theory and Signs › <b>'+nm[mode]+'</b>';const sw=$('#thNext');sw.dataset.mode=nx[mode][0];sw.textContent=nx[mode][1];
+ const cat=$('#sigCat').value,pool=SGL.filter(s=>cat==='All'||s.c===cat);
  $('#sigBar').classList.toggle('hidden',mode!=='lib');$('#thBox').classList.toggle('hidden',mode!=='theory');$('#quiz').classList.toggle('hidden',mode!=='lib');$('#ptBox').classList.toggle('hidden',mode!=='prac');
  if(mode==='theory'){renderTheory();return}
  stopTV();if(mode==='prac'){renderPT();return}
  $('#quiz').innerHTML='<div class="lib">'+pool.map((s,i)=>'<div class="sg flip" style="--i:'+(i%24)+'" tabindex="0"><div class="fi"><div class="ff">'+svgOf(s,'sign sm')+'<b>'+s.n+'</b><span class="mut">Hover to flip</span></div><div class="fb"><b>'+s.n+'</b><span>'+s.d+'</span></div></div></div>').join('')+'</div>';
-}
 
+}
 /* ---------- exam-style question sessions: Practice Theory (by topic) and mixed Practice ---------- */
 const PQ=[
 ['alert','Which of these is most likely to distract you while you are driving?',['Setting your sat nav while moving','Checking your mirrors','Looking well ahead','Keeping both hands on the wheel'],0,'Set up sat navs before you set off. Do not adjust them while moving.'],
@@ -962,7 +993,7 @@ $('#ptBox').addEventListener('click',e=>{
  if(pt)startTopic(pt.dataset.pt);
  else if(e.target.id==='qretry'&&QS)startTopic(QS.g);
  else if(e.target.id==='qtopics')renderPT();
- else if(e.target.id==='qwrong'){const r=$('#qrev');r.classList.toggle('onlywrong');e.target.textContent=r.classList.contains('onlywrong')?'Show all answers':'Show only wrong answers'}
+ else if(e.target.id==='qwrong'){const r=$('#ptBox #qrev');r.classList.toggle('onlywrong');e.target.textContent=r.classList.contains('onlywrong')?'Show all answers':'Show only wrong answers'}
 });
 /* Practice: a random mix of theory questions, sign questions and hazard clips */
 function mixSteps(){const s=$('#steps');s.classList.remove('hidden');s.innerHTML='<span>Practice · '+Math.min(MX.i+1,MX.items.length)+' of '+MX.items.length+'</span>'+MX.items.map((it,i)=>'<i class="'+(i<MX.i?'done':i===MX.i?'cur':'')+'"></i>').join('')}
@@ -987,12 +1018,12 @@ function mixResults(){
  $('#sr').textContent='Practice finished. Theory '+ok(th)+' of '+th.length+', signs '+ok(sg)+' of '+sg.length+', hazard clips '+hs+' of '+hm+'.';
 }
 $('#mixBox').addEventListener('click',e=>{
- if(e.target.id==='mixagain')startMixed();else if(e.target.id==='mixhaz')show('hazards');else if(e.target.id==='mixth')show('theory');
- else if(e.target.id==='qwrong'){const r=$('#qrev');r.classList.toggle('onlywrong');e.target.textContent=r.classList.contains('onlywrong')?'Show all answers':'Show only wrong answers'}
+ if(e.target.id==='mixagain')startMixed();else if(e.target.id==='mixhaz'){HT='hub';show('hazards')}else if(e.target.id==='mixth'){Q.mode='hub';show('theory')}
+ else if(e.target.id==='qwrong'){const r=$('#mixBox #qrev');r.classList.toggle('onlywrong');e.target.textContent=r.classList.contains('onlywrong')?'Show all answers':'Show only wrong answers'}
 });
 
 /* ---------- wiring ---------- */
-$$('[data-go]').forEach(b=>b.addEventListener('click',()=>b.dataset.go==='practice'?startMixed():show(b.dataset.go)));
+$$('[data-go]').forEach(b=>b.addEventListener('click',()=>{const go=b.dataset.go;if(go==='practice')startMixed();else{if(go==='hazards')HT=b.dataset.pane||'hub';if(go==='theory')Q.mode=b.dataset.pane||'hub';show(go)}}));
 $$('[data-start]').forEach(b=>b.addEventListener('click',()=>startMixed()));
 $('#again').addEventListener('click',()=>{if(M.exam)show('exam');else start(M.grp)});
 $('#groups').addEventListener('click',e=>{const b=e.target.closest('[data-grp]');if(b)start(b.dataset.grp)});
