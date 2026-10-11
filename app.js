@@ -5,8 +5,8 @@ const cv=$('#cv'),ctx=cv.getContext('2d'),W=800,H=450,HY=165,CX=400,FOC=14,ROAD=
 const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
 
 /* Session-only state (nothing is stored in the browser; a refresh clears it) */
-const S={hist:[],att:[],quiz:[],sq:[],streak:0,best:0,badges:{}};
-const BADGES={first:['🏁','First clip','Complete any clip'],perfect:['🎯','Perfect 5','Score 5 out of 5 on a clip'],streak5:['🔥','Hot streak','5 clips in a row scoring 4 or more'],decoy:['🛡️','Cool head','Leave a decoy clip unflagged'],mock:['🏆','Test passed','Pass a full practice test']};
+const S={hist:[],att:[],quiz:[],sq:[],tq:[],streak:0,best:0,badges:{}};
+const BADGES={first:['🏁','First clip','Complete any clip'],perfect:['🎯','Perfect 5','Score 5 out of 5 on a clip'],streak5:['🔥','Hot streak','5 clips in a row scoring 4 or more'],decoy:['🛡️','Cool head','Leave a decoy clip unflagged'],mock:['🏆','Test passed','Pass a full practice test'],quiz:['📘','Quiz ace','Score 100% in a theory topic quiz']};
 
 /* Road signs: [id, name, shape, symbol, meaning and action, category] */
 const R='Regulatory',MD='Mandatory',WN='Warning',IN='Information';
@@ -439,12 +439,12 @@ function flag(){
  if(!(P.run&&P.mode==='test'))return;clicks.push(P.t);addFlagEl(P.t);$('#sr').textContent='Flag '+clicks.length;
 }
 /* ---------- test flow ---------- */
-function steps(){const s=$('#steps');s.classList.remove('hidden');s.innerHTML='<span>Clip '+(M.i+1)+' of '+M.list.length+(M.grp?' · '+GN(M.grp):'')+'</span>'+M.list.map((c,i)=>'<i class="'+(i<M.res.length?'done':i===M.i?'cur':'')+'"></i>').join('')}
+function steps(){if(M.mixed){mixSteps();return}const s=$('#steps');s.classList.remove('hidden');s.innerHTML='<span>Clip '+(M.i+1)+' of '+M.list.length+(M.grp?' · '+GN(M.grp):'')+'</span>'+M.list.map((c,i)=>'<i class="'+(i<M.res.length?'done':i===M.i?'cur':'')+'"></i>').join('')}
 function pick(){const d=sh(CLIPS.filter(c=>c.hs==null)),h=sh(CLIPS.filter(c=>c.hs!=null));return sh(d.slice(0,1).concat(h.slice(0,7)))}
 function start(grp,opt){HT='practice';M={i:0,res:[],mx:[],on:true,grp:grp||null,exam:!!(opt&&opt.exam),lesson:false,list:(opt&&opt.list)||(grp?sh(CLIPS.filter(c=>c.g===grp)):pick())};startClip()}
 function startClip(){
  const c=M.list[M.i];clicks=[];if(document.activeElement)document.activeElement.blur();
- $('#clipLbl').textContent='Clip '+(M.i+1)+' of '+M.list.length;$('#speedLbl').textContent=c.mph+' mph';
+ $('#clipLbl').textContent=M.lbl||'Clip '+(M.i+1)+' of '+M.list.length;$('#speedLbl').textContent=c.mph+' mph';
  $('#flags').innerHTML='<span>Flags appear here</span>';$('#capt').textContent=c.cap;$('#capt').classList.toggle('hidden',!$('#cc').checked);
  $('#live').classList.remove('hidden');$('#rev').classList.add('hidden');$('#lesson').classList.add('hidden');steps();show('clip');play(c,'test',1,false);
 }
@@ -485,7 +485,7 @@ function finish(){
  SQ=null;const sqe=$('#rvSignQ');
  if(sids.length){const id=sids[Math.floor(Math.random()*sids.length)],sg=SGM[id],o=sh([sg.d].concat(sh(SGL.filter(x=>x.d!==sg.d)).slice(0,3).map(x=>x.d)));SQ={a:o.indexOf(sg.d)};sqe.innerHTML='<h3>Sign check</h3><div class="sgc">'+svgOf(sg,'sign sm')+'<b>What does this sign mean and what should you do?</b></div><div class="opts">'+o.map((t,i)=>'<button data-j="'+i+'">'+t+'</button>').join('')+'</div><div id="sqf" aria-live="polite"></div>'}else sqe.innerHTML='';
  tlBuild($('#tl'),c,'ph',clicks);
- $('#next').textContent=M.i===M.list.length-1?'See results':'Next clip';
+ $('#next').textContent=M.after?'Continue':M.i===M.list.length-1?'See results':'Next clip';
  $('#sr').textContent='Clip scored '+s+' out of '+r.mx+'. '+$('#rvMsg').textContent;
  if(r.parts.some(p=>p<MAX))setTimeout(()=>{if(M.on&&!$('#rev').classList.contains('hidden'))replay(true)},1200);
 }
@@ -509,9 +509,10 @@ function award(id){if(S.badges[id])return;S.badges[id]=1;const b=BADGES[id],t=$(
 function show(id){
  if(id!=='theory')stopTV();
  if(id!=='clip'){P.run=false;cancelAnimationFrame(raf)}
- if(id!=='clip'&&id!=='results')$('#steps').classList.add('hidden');
+ if(id!=='clip'&&id!=='results'&&id!=='qs')$('#steps').classList.add('hidden');
+ const sw=$('#sw');sw.classList.remove('go');void sw.offsetWidth;sw.classList.add('go');
  $$('.screen').forEach(s=>s.classList.add('hidden'));const el=$('#'+id);el.classList.remove('hidden','enter');void el.offsetWidth;el.classList.add('enter');
- $$('nav button').forEach(b=>b.removeAttribute('aria-current'));const nb=$('nav [data-go="'+(id==='clip'||id==='results'?(M.exam?'exam':(M.lesson||M.grp)?'hazards':'practice'):id)+'"]');if(nb)nb.setAttribute('aria-current','page');
+ $$('nav button').forEach(b=>b.removeAttribute('aria-current'));const nb=$('nav [data-go="'+(id==='qs'||id==='mix'?'practice':id==='clip'||id==='results'?(M.exam?'exam':(M.lesson||M.grp)?'hazards':'practice'):id)+'"]');if(nb)nb.setAttribute('aria-current','page');
  if(id==='profile')profile();if(id==='hazards')hazTab(HT);if(id==='exam')examIntro();if(id==='theory')quiz(Q.mode);window.scrollTo(0,0);
 }
 
@@ -524,7 +525,7 @@ $('#rvSignQ').addEventListener('click',e=>{const b=e.target.closest('[data-j]');
 /* ---------- profile ---------- */
 function profile(){
  const n=S.hist.length,avg=n?(S.hist.reduce((a,b)=>a+b.s,0)/(S.hist.reduce((a,b)=>a+b.mx,0)/5)).toFixed(1):'-';
- $('#stats').innerHTML=[['Clips completed',n],['Average score',avg+(n?' / 5':'')],['Current streak','🔥 '+S.streak],['Best streak',S.best],['Sign checks',S.sq.length?S.sq.reduce((a,b)=>a+b,0)+' / '+S.sq.length:'-']].map(x=>'<div class="card"><span class="mut">'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+ $('#stats').innerHTML=[['Clips completed',n],['Average score',avg+(n?' / 5':'')],['Current streak','🔥 '+S.streak],['Best streak',S.best],['Sign checks',S.sq.length?S.sq.reduce((a,b)=>a+b,0)+' / '+S.sq.length:'-'],['Theory quizzes',S.tq.length?Math.round(S.tq.reduce((a,b)=>a+b.sc,0)/S.tq.reduce((a,b)=>a+b.n,0)*100)+'%':'-']].map(x=>'<div class="card"><span class="mut">'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');$$('#stats b').forEach(b=>{if(/^\d+$/.test(b.textContent))countUp(b,+b.textContent,700)});
  if(!n)$('#chart').innerHTML='<p class="mut">Complete a clip to see your history chart.</p>';
  else{const w=900,h=170,pts=S.hist.map((x,i)=>[n>1?30+i*(w-60)/(n-1):w/2,h-20-x.s/x.mx*MAX/MAX*(h-40)]);
   $('#chart').innerHTML='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Line chart of your clip scores over time, out of 5">'+[0,5].map(v=>'<line x1="30" x2="'+(w-30)+'" y1="'+(h-20-v/MAX*(h-40))+'" y2="'+(h-20-v/MAX*(h-40))+'" stroke="currentColor" opacity=".2"/>').join('')+'<polyline fill="none" stroke="#d6232a" stroke-width="3" points="'+pts.map(p=>p.join(',')).join(' ')+'"/>'+pts.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="#d6232a"><title>Clip '+(i+1)+': '+S.hist[i].s+'/'+S.hist[i].mx+'</title></circle>').join('')+'</svg>'}
@@ -850,19 +851,153 @@ let Q={mode:'theory'};
 function quiz(mode){
  Q.mode=mode;const cat=$('#sigCat').value,pool=SGL.filter(s=>cat==='All'||s.c===cat);
  $$('[data-mode]').forEach(b=>b.setAttribute('aria-selected',b.dataset.mode===mode));
- $('#sigBar').classList.toggle('hidden',mode!=='lib');$('#thBox').classList.toggle('hidden',mode!=='theory');$('#quiz').classList.toggle('hidden',mode!=='lib');
+ $('#sigBar').classList.toggle('hidden',mode!=='lib');$('#thBox').classList.toggle('hidden',mode!=='theory');$('#quiz').classList.toggle('hidden',mode!=='lib');$('#ptBox').classList.toggle('hidden',mode!=='prac');
  if(mode==='theory'){renderTheory();return}
- stopTV();
+ stopTV();if(mode==='prac'){renderPT();return}
  $('#quiz').innerHTML='<div class="lib">'+pool.map((s,i)=>'<div class="sg flip" style="--i:'+(i%24)+'" tabindex="0"><div class="fi"><div class="ff">'+svgOf(s,'sign sm')+'<b>'+s.n+'</b><span class="mut">Hover to flip</span></div><div class="fb"><b>'+s.n+'</b><span>'+s.d+'</span></div></div></div>').join('')+'</div>';
 }
 
+/* ---------- exam-style question sessions: Practice Theory (by topic) and mixed Practice ---------- */
+const PQ=[
+['alert','Which of these is most likely to distract you while you are driving?',['Setting your sat nav while moving','Checking your mirrors','Looking well ahead','Keeping both hands on the wheel'],0,'Set up sat navs before you set off. Do not adjust them while moving.'],
+['alert','What is the penalty for using a hand-held phone while driving?',['A warning only','3 penalty points','6 penalty points and a £200 fine','No penalty if you are at traffic lights'],2,'Using a hand-held phone is illegal, including at traffic lights, and can mean 6 points and a £200 fine.'],
+['alert','How often should you take a break on a long journey?',['Every 30 minutes','At least every two hours','Every five hours','Only when you run low on fuel'],1,'Take a break of at least 15 minutes every two hours to avoid fatigue.'],
+['att','Another driver is tailgating you. What should you do?',['Brake sharply to scare them','Speed up to get away','Slow down gently and let them pass when it is safe','Flash your hazard lights'],2,'Do not react aggressively. Ease off, let them go by when it is safe, and keep your own safe gap.'],
+['att','A driver flashes their headlights at you at a junction. What does it mean?',['They are giving you priority, so go','They are letting you know they are there','They want you to hurry','They are warning of a speed camera'],1,'Flashing headlights only means "I am here". Never assume it is an invitation to go.'],
+['att','When may you use your horn in a built-up area between 11:30 pm and 7 am?',['To say hello to a friend','When another road user poses a danger','When waiting at traffic lights','To hurry other traffic'],1,'Do not use your horn in a built-up area at night unless another moving vehicle poses a danger.'],
+['att','An aggressive driver is following you and you feel threatened. What should you do?',['Stop and confront them','Drive to a place of safety such as a police station','Race away','Brake suddenly'],1,'Do not retaliate. Drive to a safe, busy place such as a police station, and keep your doors locked.'],
+['att','Which of these shows consideration for other road users?',['Parking across a driveway','Letting a bus pull out when it is safe','Using a bus lane to save time','Cutting in front of a cyclist'],1,'Giving way to buses when it is safe helps everyone.'],
+['att','Why should you stay calm when another driver makes a mistake?',['Anger can lead you to drive dangerously','It saves fuel','It lets you drive faster','It helps you park'],0,'Anger and retaliation increase risk for everybody.'],
+['saf','What does POWDERY remind you to check?',['Vehicle and driver checks such as petrol, oil, water and tyres','Passenger seat belts only','Road signs on your route','Parking restrictions'],0,'POWDERY: Petrol, Oil, Water, Damage, Electrics, Rubber and Yourself.'],
+['saf','When should you check your tyre pressures?',['When the tyres are hot','Regularly, when the tyres are cold','Only at the MOT','Only after long journeys'],1,'Check pressures regularly when tyres are cold, including the spare.'],
+['saf','Who is responsible for making sure passengers under 14 wear a seat belt?',['The passengers','The driver','The front seat passenger','Nobody'],1,'The driver is legally responsible for passengers under 14.'],
+['saf','Until what age or height must a child use a child car seat?',['5 years old','12 years old or 135 cm tall, whichever comes first','14 years old','Only if under 1 metre tall'],1,'Children must use a car seat until they are 12 or 135 cm tall, whichever comes first.'],
+['saf','Your ABS warning light stays on. What does this mean?',['The brakes have failed completely','The ABS may not be working, but your normal brakes should still work','The handbrake is on','A tyre is flat'],1,'Normal braking should still work, but get the ABS checked.'],
+['mar','If you double your speed, what happens to your braking distance?',['It stays the same','It doubles','It becomes about four times longer','It halves'],2,'Braking distance becomes about four times longer when your speed doubles.'],
+['mar','What is the typical overall stopping distance at 70 mph?',['53 metres','75 metres','96 metres','120 metres'],2,'At 70 mph the typical overall stopping distance is 96 metres, about 24 car lengths.'],
+['haz','What is a developing hazard?',['A hazard that is getting more dangerous','A road sign ahead','A stationary parked car','A clear empty road'],0,'A developing hazard is something that may make you change speed or direction.'],
+['haz','A ball rolls into the road ahead. What should you expect?',['Nothing, it is just a ball','A child may run out after it','A bus to stop','A cyclist to overtake you'],1,'A ball in the road often means a child is about to follow it.'],
+['haz','Why should you be cautious when passing a parked van?',['It may be on fire','It may hide a pedestrian who steps out','It will definitely move off','It blocks your road signs'],1,'Large parked vehicles hide pedestrians. Slow down and watch for people stepping out.'],
+['haz','A car is waiting to emerge from a side road ahead. What should you do?',['Speed up to pass it','Be ready to slow down or stop','Ignore it','Sound your horn only'],1,'Watch the driver and be ready to slow down. They may not have seen you.'],
+['haz','You are driving into low winter sun. What should you do?',['Drive faster to get through','Slow down and use your sun visor','Switch off your headlights','Close your eyes briefly'],1,'Slow down, use the visor and expect people you cannot see.'],
+['haz','What is the best way to scan the road?',['Look only at the car in front','Look well ahead, to the sides and in your mirrors','Look only in your mirrors','Look mainly at the dashboard'],1,'Scan far ahead and to the sides, and check your mirrors regularly.'],
+['vru','Which road users are the most vulnerable?',['Pedestrians','Lorry drivers','Car drivers','Bus drivers'],0,'Pedestrians are at the top of the hierarchy of vulnerable road users, followed by cyclists, horse riders and motorcyclists.'],
+['vru','How much space should you leave when overtaking a cyclist at up to 30 mph?',['0.5 metres','1 metre','At least 1.5 metres','3 metres'],2,'Leave at least 1.5 metres, and more at higher speeds.'],
+['vru','You are turning into a side road and pedestrians are crossing it. What should you do?',['Sound your horn and go','Give way to them','Speed up to turn first','Flash your headlights'],1,'You must give way to pedestrians crossing or waiting to cross the road you are turning into.'],
+['vru','A pedestrian carries a white stick with a red band. What does this mean?',['They are both deaf and blind','They are a child','They are a runner','They are lost'],0,'A white stick with a red band means the person is deaf and blind.'],
+['vru','How should you pass a horse and rider?',['Quickly, sounding your horn','Slowly and with plenty of room','As close as possible','Revving your engine'],1,'Pass slowly, give at least 2 metres, and do not sound your horn or rev your engine.'],
+['vru','What is the Dutch reach?',['A parking method','Opening your car door with the hand furthest from the door','A cyclist hand signal','A way of overtaking'],1,'The Dutch reach makes you turn and check for cyclists before you open the door.'],
+['oth','Why should you take extra care around motorcyclists at junctions?',['They are small and easy to miss','They always speed','They never signal','They cannot stop'],0,'Motorcycles are small and easy to miss, so look twice.'],
+['oth','A large vehicle ahead is turning left. What should you not do?',['Stay back','Squeeze up the inside','Watch its indicators','Slow down'],1,'Large vehicles swing out before turning. Never squeeze up the inside.'],
+['oth','A tram is approaching a crossing. What should you do?',['Cross quickly','Stop and let it pass, as it cannot swerve','Race it','Sound your horn at it'],1,'Trams cannot swerve and take a long time to stop.'],
+['oth','Why should you take extra care around electric vehicles?',['They are very quiet, so pedestrians may not hear them','They are always fast','They cannot brake','They have no lights'],0,'Electric vehicles are quiet, so pedestrians may step out without hearing them.'],
+['oth','A tractor ahead is moving slowly. What should you do?',['Overtake immediately','Be patient and overtake only when it is safe','Sound your horn repeatedly','Tailgate it'],1,'Be patient and overtake only when you can see it is safe.'],
+['han','What is aquaplaning?',['Tyres losing contact with the road on standing water','Driving too fast on ice','Brake failure','A skid on gravel'],0,'Aquaplaning happens when a layer of water lifts the tyres off the road.'],
+['han','Your vehicle starts to skid. What should you do?',['Brake hard immediately','Ease off the accelerator and steer smoothly into the skid','Accelerate','Swerve the other way'],1,'Ease off and steer gently in the direction the rear is sliding.'],
+['han','You have driven through a flood. What should you do afterwards?',['Test your brakes','Speed up','Switch off your lights','Nothing'],0,'Wet brakes may be less effective. Test them gently.'],
+['mw','What does a red X above a lane on a smart motorway mean?',['The lane is open','Do not use that lane because it is closed','A speed camera is ahead','Slow down only'],1,'A red X means the lane is closed and you must not use it.'],
+['mw','Which road users are not allowed on a motorway?',['Cars','Cyclists and pedestrians','Vans','Lorries'],1,'Pedestrians, cyclists, horse riders and some slow vehicles are banned from motorways.'],
+['rul','What is the speed limit for a car towing a trailer on a single carriageway?',['40 mph','50 mph','60 mph','70 mph'],1,'Cars towing trailers are limited to 50 mph on single carriageways.'],
+['rul','What does a flashing red light at a level crossing mean?',['Stop','Go slowly','Cross with care','Give way'],0,'You must stop when the red lights flash at a level crossing.'],
+['sig','What shape are warning signs?',['Circular','Triangular','Octagonal','Square'],1,'Warning signs are triangular.'],
+['sig','What do blue circular signs give?',['Warnings','Mandatory instructions','Directions to motorways','Tourist information'],1,'Blue circles give positive instructions that you must follow.'],
+['sig','What colour are direction signs on primary routes?',['Blue','Green','White','Brown'],1,'Primary routes have green signs. Motorways have blue and local roads have white.'],
+['sig','What colour road studs mark the left edge of the carriageway?',['White','Red','Amber','Green'],1,'Red studs mark the left edge, white between lanes, amber on the central reservation side and green at slip roads.'],
+['sig','What does a long line with short gaps in the centre of the road warn of?',['A hazard ahead','A bus lane','A parking area','A speed camera'],0,'Long lines with short gaps are hazard warning lines.'],
+['sig','How do you signal a right turn with your arm?',['Arm straight out','Arm moving up and down','Arm moving in a circle','Arm held straight up'],0,'For a right turn, hold your arm straight out.'],
+['sig','What does a red ring around a sign usually mean?',['It gives an order, usually something you must not do','It is for information only','It is a warning','It is a route to a motorway'],0,'Red rings on circular signs are prohibitions or restrictions.'],
+['doc','What is the minimum insurance you must have to drive on a public road?',['None','Third party','Fully comprehensive only','Breakdown cover'],1,'You must have at least third party insurance.'],
+['doc','What does SORN mean?',['Statutory Off Road Notification','Safe On Road Number','Street Owner Registration Note','Speed Of Road Notice'],0,'A SORN declares that a vehicle is kept off the road, so it does not need tax or insurance.'],
+['doc','How long is a photocard driving licence valid before it must be renewed?',['5 years','10 years','15 years','20 years'],1,'A photocard licence must be renewed every 10 years.'],
+['doc','When should you tell DVLA about a medical condition that affects your driving?',['Never','As soon as it affects your driving','Only when you renew','Only after an accident'],1,'Tell DVLA as soon as a condition may affect your ability to drive safely.'],
+['inc','You break down on a motorway. Where should you wait?',['In the vehicle on the hard shoulder','Behind the barrier, away from traffic','On the carriageway','Beside your car on the road'],1,'Leave by the left-hand door and wait behind the barrier, well away from traffic.'],
+['inc','What does DR ABC stand for in first aid?',['Danger, Response, Airway, Breathing, Circulation','Drive, Reverse, Accelerate, Brake, Clutch','Dial, Repair, Assess, Bandage, Call','Danger, Run, Alert, Breathe, Call'],0,'DR ABC: Danger, Response, Airway, Breathing, Circulation.'],
+['inc','When should you call 999 or 112?',['Only for fires','When there is an emergency such as injured people','Never at night','Only after exchanging details'],1,'Call as soon as possible when there are injuries or danger.'],
+['inc','How far behind a broken-down vehicle should you place a warning triangle on an ordinary road, if it is safe?',['10 metres','About 45 metres','100 metres','200 metres'],1,'Place it about 45 metres behind your vehicle, but never on a motorway.'],
+['inc','You are in a crash with injuries and do not exchange details. When must you report it to the police?',['Within 24 hours','Within a week','Within a month','You do not have to'],0,'Report it to the police as soon as possible and within 24 hours.'],
+['inc','Your vehicle catches fire. What should you do?',['Fight the fire yourself','Get everyone out and away, then call the fire service','Drive faster','Open the bonnet'],1,'Get everyone out and keep clear, then call 999.'],
+['load','Where should heavy items be placed in a vehicle?',['High and at the back','As low and as close to the middle as possible','On the roof','It does not matter'],1,'Heavy items should be low and central for stability.'],
+['load','What can overloading a vehicle affect?',['Only your fuel use','Steering and braking','Only the radio','Nothing'],1,'Overloading affects steering, braking and tyre wear.'],
+['load','A caravan starts to snake. What should you do?',['Brake hard','Ease off the accelerator','Steer sharply','Accelerate'],1,'Ease off the accelerator and do not brake hard or steer sharply.'],
+['load','Which lane must a vehicle towing a trailer not use on a motorway with three or more lanes?',['The left lane','The right-hand lane','The middle lane','There is no restriction'],1,'Vehicles towing must not use the right-hand lane.'],
+['load','How should pets be carried in a car?',['Loose on the back seat','Suitably restrained','Unrestrained on the front seat','Loose in the footwell'],1,'Pets must be restrained so they cannot distract you or be thrown about.'],
+['load','What should you check before towing a trailer?',['Lights, coupling and tyre pressures','Nothing','That the mirrors are removed','That the headlights are off'],0,'Check the lights, coupling, number plate and tyres before towing.']];
+const TAGS=['mar','saf','mar','han','rul','alert','rul','mw','mw','mw','rul','oth','doc','han','rul','han','alert','doc','rul','rul','rul','mar','mar','rul','rul','mw','alert'],CASETAGS=['mw','mar','han','sig','alert'];
+const norm=(x,g)=>({g,q:x.q,o:x.o,a:Array.isArray(x.a)?x.a:[x.a],why:x.why});
+const qsh=x=>{const idx=sh(x.o.map((_,i)=>i));return{g:x.g,t:x.t,svg:x.svg,q:x.q,o:idx.map(i=>x.o[i]),a:x.a.map(a=>idx.indexOf(a)),why:x.why}};
+function topicBank(g){return EXAMQ.map((x,i)=>norm(x,TAGS[i])).concat(CASE.qs.map((x,i)=>norm(x,CASETAGS[i]))).concat(PQ.map(p=>norm({q:p[1],o:p[2],a:p[3],why:p[4]},p[0]))).filter(x=>x.g===g)}
+function sgQ(s){const ds=[...new Set(SGL.map(x=>x.d))].filter(d=>d!==s.d),o=sh([s.d].concat(sh(ds).slice(0,3)));return{t:'s',g:'sig',svg:svgOf(s,'sign'),q:'What does this sign mean and what should you do?',o,a:[o.indexOf(s.d)],why:s.n+': '+s.d}}
+let QS=null,BEST={},MX=null;
+function qsStart(o){QS=Object.assign({i:0,ans:[]},o);qsRender()}
+function qsRender(){
+ const q=QS.items[QS.i],sel=QS.ans[QS.i]||[],n=QS.items.length,last=QS.i===n-1;
+ $(QS.host).innerHTML='<div class="exh"><b>'+QS.title+'</b><span>'+(QS.nobar?'Question':'Question '+(QS.i+1)+' of '+n)+'</span></div>'+(QS.nobar?'':'<div class="qbar"><i id="qfill" style="width:'+(QS.i/n*100)+'%"></i></div>')+'<div class="exq qslide">'+(q.svg||'')+'<h2>'+q.q+'</h2>'+(q.a.length>1?'<p class="mut">Mark two answers.</p>':'')+'<div class="opts">'+q.o.map((t,i)=>'<button data-qo="'+i+'" class="'+(sel.includes(i)?'sel':'')+'">'+t+'</button>').join('')+'</div></div><div class="exf"><button class="sec" id="qprev"'+(QS.i&&QS.prev?'':' hidden')+'>Previous</button><button id="qnext">'+(last?(QS.finish||'Finish'):'Next')+'</button></div>';
+ if(!QS.nobar)setTimeout(()=>{const f=$('#qfill');if(f)f.style.width=((QS.i+1)/n*100)+'%'},30);
+}
+document.addEventListener('click',e=>{
+ if(!QS)return;const host=$(QS.host);if(!host||!host.contains(e.target))return;
+ const o=e.target.closest('[data-qo]');
+ if(o){const q=QS.items[QS.i],i=+o.dataset.qo;let s=QS.ans[QS.i]||[];if(q.a.length>1){s=s.includes(i)?s.filter(x=>x!==i):s.concat(i).slice(-2)}else s=[i];QS.ans[QS.i]=s;$$(QS.host+' [data-qo]').forEach((b,k)=>b.classList.toggle('sel',s.includes(k)));return}
+ if(e.target.id==='qprev'){QS.i--;qsRender()}
+ else if(e.target.id==='qnext'){if(QS.i<QS.items.length-1){QS.i++;qsRender()}else QS.onDone(QS)}
+});
+function qsReview(items,ans){
+ return items.map((q,i)=>{const a=ans[i]||[],ok=same(q,a);return'<div class="rv2 '+(ok?'ok':'bad')+'" style="--i:'+Math.min(i,14)+'"><div class="rvh"><span class="mk2">'+(ok?'✓':'✗')+'</span><b>Q'+(i+1)+'. '+q.q+'</b></div><p>Your answer: '+(a.length?a.map(k=>q.o[k]).join(' / '):'Not answered')+'</p>'+(ok?'':'<p>Correct answer: <b>'+q.a.map(k=>q.o[k]).join(' / ')+'</b></p>')+'<p class="mut">'+q.why+'</p></div>'}).join('');
+}
+/* Practice Theory: topics -> exam-style session -> review of right and wrong answers */
+function renderPT(){
+ QS=null;
+ $('#ptBox').innerHTML='<h2>Practice Theory</h2><p class="mut">Choose a topic for exam-style questions. When you finish, you will see which answers were right and which were wrong, with the correct answers explained.</p><div class="groups">'+TG.map((g,i)=>{const n=topicBank(g.id).length,b=BEST[g.id];return'<button class="gcard" data-pt="'+g.id+'" style="--i:'+i+'"><span class="gi">'+g.i+'</span><b>'+g.n+'</b><span class="mut">'+g.d+'</span><span class="gm">'+n+' questions · '+(b!=null?'Best '+b+'/'+n:'Not tried yet')+'</span>'+(b!=null?'<span class="pm"><i style="width:'+Math.round(b/n*100)+'%"></i></span>':'')+'<span class="go">Start practice →</span></button>'}).join('')+'</div>';
+}
+function startTopic(g){const G=TG.find(x=>x.id===g);qsStart({host:'#ptBox',title:G.n,g,items:sh(topicBank(g)).map(qsh),prev:true,finish:'Finish and see results',onDone:ptResult});window.scrollTo(0,0)}
+function ptResult(qs){
+ const n=qs.items.length,sc=qs.items.filter((q,i)=>same(q,qs.ans[i])).length,pct=Math.round(sc/n*100);
+ S.tq.push({g:qs.g,sc,n});BEST[qs.g]=Math.max(BEST[qs.g]||0,sc);if(sc===n){award('quiz');confetti(innerWidth/2,innerHeight/3)}
+ $(qs.host).innerHTML='<div class="exh"><b>'+qs.title+': results</b></div><div class="exq"><div class="big"><span id="qsScore">0</span><small> / '+n+'</small></div><div class="qm"><i data-w="'+pct+'"></i></div><p><b>'+pct+'%</b> '+(sc===n?'Perfect. You know this topic well.':pct>=86?'Excellent. That is above the real pass mark of 86%.':pct>=60?'Good progress. Review the answers you missed below.':'Keep learning this topic in Theory Learning, then try again.')+'</p><div class="row"><button id="qretry">Try again</button><button class="sec" id="qwrong">Show only wrong answers</button><button class="sec" id="qtopics">Back to topics</button></div><div id="qrev" class="qrev">'+qsReview(qs.items,qs.ans)+'</div></div>';
+ countUp($('#qsScore'),sc,900);setTimeout(()=>{const m=$(qs.host+' .qm i');if(m)m.style.width=m.dataset.w+'%'},60);
+ $('#sr').textContent='Quiz finished. You scored '+sc+' out of '+n+'.';
+}
+$('#ptBox').addEventListener('click',e=>{
+ const pt=e.target.closest('[data-pt]');
+ if(pt)startTopic(pt.dataset.pt);
+ else if(e.target.id==='qretry'&&QS)startTopic(QS.g);
+ else if(e.target.id==='qtopics')renderPT();
+ else if(e.target.id==='qwrong'){const r=$('#qrev');r.classList.toggle('onlywrong');e.target.textContent=r.classList.contains('onlywrong')?'Show all answers':'Show only wrong answers'}
+});
+/* Practice: a random mix of theory questions, sign questions and hazard clips */
+function mixSteps(){const s=$('#steps');s.classList.remove('hidden');s.innerHTML='<span>Practice · '+Math.min(MX.i+1,MX.items.length)+' of '+MX.items.length+'</span>'+MX.items.map((it,i)=>'<i class="'+(i<MX.i?'done':i===MX.i?'cur':'')+'"></i>').join('')}
+function startMixed(){
+ const pat=['q','q','c','s','q','c','s','q','c','q','s','c'],qs=sh(EXAMQ).slice(0,5).map(x=>Object.assign(qsh(norm(x,'x')),{t:'q'})),ss=sh(SGL).slice(0,3).map(sgQ),
+  sing=sh(CLIPS.filter(c=>WIN(c).length===1)).slice(0,3),cs=sing.concat(sh(CLIPS.filter(c=>!sing.includes(c))).slice(0,1));
+ let a=0,b=0,c=0;MX={items:pat.map(p=>p==='q'?qs[a++]:p==='s'?ss[b++]:{t:'c',clip:cs[c++]}),i:0,qa:[],hr:[]};
+ runMix();
+}
+function runMix(){
+ if(MX.i>=MX.items.length)return mixResults();
+ const it=MX.items[MX.i];
+ if(it.t==='c'){M={i:0,res:[],mx:[],on:true,grp:null,exam:false,lesson:false,mixed:true,lbl:'Practice clip',list:[it.clip],after:()=>{MX.hr.push({c:it.clip,s:M.res[0],mx:M.mx[0]});MX.i++;runMix()}};startClip()}
+ else{mixSteps();show('qs');qsStart({host:'#qsBox',title:it.t==='s'?'Practice: road sign':'Practice: theory question',items:[it],prev:false,nobar:true,finish:'Next',onDone:q=>{MX.qa.push({it,ans:q.ans[0]||[]});MX.i++;runMix()}})}
+}
+function mixResults(){
+ const qa=MX.qa,th=qa.filter(x=>x.it.t==='q'),sg=qa.filter(x=>x.it.t==='s'),ok=l=>l.filter(x=>same(x.it,x.ans)).length,hs=MX.hr.reduce((a,b)=>a+b.s,0),hm=MX.hr.reduce((a,b)=>a+b.mx,0);
+ S.tq.push({g:'mix',sc:ok(qa),n:qa.length});$('#steps').classList.add('hidden');
+ $('#mixBox').innerHTML='<div class="exh"><b>Practice results</b></div><div class="exq"><div class="tut"><div class="card"><span class="gi">📘</span><b>Theory questions</b><p><span class="mn">'+ok(th)+'</span> / '+th.length+'</p></div><div class="card"><span class="gi">🛑</span><b>Road signs</b><p><span class="mn">'+ok(sg)+'</span> / '+sg.length+'</p></div><div class="card"><span class="gi">🎬</span><b>Hazard clips</b><p><span class="mn">'+hs+'</span> / '+hm+'</p></div></div><h3>Hazard clips</h3>'+MX.hr.map((h,i)=>'<div class="rr"><span>'+h.c.title+'</span><div class="meter"><i data-w="'+Math.round(h.s/h.mx*100)+'"></i></div><b>'+h.s+'/'+h.mx+'</b></div>').join('')+'<h3>Questions</h3><div class="row"><button class="sec" id="qwrong">Show only wrong answers</button></div><div id="qrev" class="qrev">'+qsReview(qa.map(x=>x.it),qa.map(x=>x.ans))+'</div><div class="row" style="margin-top:16px"><button id="mixagain">Practise again</button><button class="sec" id="mixhaz">Hazards</button><button class="sec" id="mixth">Theory and Signs</button></div></div>';
+ show('mix');$$('#mixBox .mn').forEach(e=>countUp(e,+e.textContent,900));$$('#mixBox .meter i').forEach((e,i)=>setTimeout(()=>e.style.width=e.dataset.w+'%',300+i*350));
+ if(ok(qa)===qa.length&&hs===hm)confetti(innerWidth/2,innerHeight/3);
+ $('#sr').textContent='Practice finished. Theory '+ok(th)+' of '+th.length+', signs '+ok(sg)+' of '+sg.length+', hazard clips '+hs+' of '+hm+'.';
+}
+$('#mixBox').addEventListener('click',e=>{
+ if(e.target.id==='mixagain')startMixed();else if(e.target.id==='mixhaz')show('hazards');else if(e.target.id==='mixth')show('theory');
+ else if(e.target.id==='qwrong'){const r=$('#qrev');r.classList.toggle('onlywrong');e.target.textContent=r.classList.contains('onlywrong')?'Show all answers':'Show only wrong answers'}
+});
+
 /* ---------- wiring ---------- */
-$$('[data-go]').forEach(b=>b.addEventListener('click',()=>b.dataset.go==='practice'?start():show(b.dataset.go)));
-$$('[data-start]').forEach(b=>b.addEventListener('click',()=>start()));
-$('#again').addEventListener('click',()=>start(M.grp));
+$$('[data-go]').forEach(b=>b.addEventListener('click',()=>b.dataset.go==='practice'?startMixed():show(b.dataset.go)));
+$$('[data-start]').forEach(b=>b.addEventListener('click',()=>startMixed()));
+$('#again').addEventListener('click',()=>{if(M.exam)show('exam');else start(M.grp)});
 $('#groups').addEventListener('click',e=>{const b=e.target.closest('[data-grp]');if(b)start(b.dataset.grp)});
 $$('[data-mode]').forEach(b=>b.addEventListener('click',()=>quiz(b.dataset.mode)));
-$('#next').addEventListener('click',()=>{M.i++;M.i>=M.list.length?results():startClip()});
+$('#next').addEventListener('click',()=>{M.i++;M.i>=M.list.length?(M.after?M.after():results()):startClip()});
 $('#replay').addEventListener('click',()=>replay(true));
 $('#spd').addEventListener('input',e=>{$('#spdv').textContent=e.target.value+'x';if(P.mode==='replay')P.sp=+e.target.value});
 $('#print').addEventListener('click',()=>window.print());
