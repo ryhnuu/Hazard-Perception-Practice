@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const TOUCH=matchMedia('(hover:none) and (pointer:coarse)').matches;
 const cv=$('#cv'),ctx=cv.getContext('2d'),W=800,H=450,HY=165,CX=400,FOC=14,ROAD=3.5,MAX=5,PASS=59;
 const sh=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1]);
 
@@ -390,7 +391,7 @@ function dash(c,t,RM){
 function hint(c,t){
  WIN(c).forEach((w,i)=>{const z=HZ[i+1];if(!z)return;const cy=z.y-70*z.d;
   if(t>=w.hs-.3&&t<=w.he){ctx.save();ctx.strokeStyle='#f2b705';ctx.shadowColor='#f2b705';ctx.shadowBlur=20;ctx.lineWidth=4+Math.sin(t*10)*1.5;ctx.beginPath();ctx.ellipse(z.x,cy,55*z.d+14,85*z.d+14,0,0,7);ctx.stroke();ctx.restore()}
-  if(P.tipw&&P.tipw[i]){const txt=t>=w.hs&&t<=w.hs+1.4?'Press Space now!':t>=w.hs-1.8&&t<w.hs?'Watch this area...':'';
+  if(P.tipw&&P.tipw[i]){const txt=t>=w.hs&&t<=w.hs+1.4?(TOUCH?'Tap now!':'Press Space now!'):t>=w.hs-1.8&&t<w.hs?'Watch this area...':'';
    if(txt){ctx.font='bold 20px Segoe UI, Arial';const tw=ctx.measureText(txt).width+28,x=Math.max(8,Math.min(W-tw-8,z.x-tw/2)),y=Math.max(30,cy-85*z.d-48);ctx.fillStyle=txt[0]==='P'?'#f2b705':'#fff';ctx.fillRect(x,y,tw,34);ctx.fillStyle='#111';ctx.fillText(txt,x+14,y+24)}}});
 }
 function sprite(o){
@@ -1071,5 +1072,21 @@ let ti=0;$('#tick').textContent=TIPS[0];
 setInterval(()=>{const t=$('#tick');if(!t||document.body.classList.contains('rm')||$('#home').classList.contains('hidden'))return;t.classList.add('out');setTimeout(()=>{ti=(ti+1)%TIPS.length;t.textContent=TIPS[ti];t.classList.remove('out')},350)},4200);
 window.addEventListener('scroll',()=>{const h=document.documentElement,m=h.scrollHeight-h.clientHeight;h.style.setProperty('--sp',(m>0?h.scrollTop/m*100:0)+'%')});
 document.addEventListener('pointermove',e=>{if(document.body.classList.contains('rm'))return;const b=e.target.closest&&e.target.closest('.cta,.ghost');$$('.cta,.ghost').forEach(x=>{if(x!==b)x.style.translate=''});if(b){const r=b.getBoundingClientRect();b.style.translate=((e.clientX-r.left-r.width/2)*.12)+'px '+((e.clientY-r.top-r.height/2)*.2)+'px'}});
+/* ---------- mobile and touch layer ---------- */
+(function(){
+ const stg2=$('.stage'),btn=$('#tapFlag');
+ const tap=e=>{if(P.run&&P.mode==='test'){e.preventDefault();flag();if(e.currentTarget===btn){btn.classList.add('hit');setTimeout(()=>btn.classList.remove('hit'),150)}}};
+ stg2.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')tap(e)});
+ stg2.addEventListener('contextmenu',e=>e.preventDefault());
+ btn.addEventListener('pointerdown',tap);
+ btn.addEventListener('click',e=>e.preventDefault());
+ const hh=()=>document.documentElement.style.setProperty('--hh',$('header').offsetHeight+'px');
+ if(window.ResizeObserver)new ResizeObserver(hh).observe($('header'));hh();
+ const dt=$('.ctlw'),mq=matchMedia('(max-width:820px)'),sync=()=>{dt.open=!mq.matches};
+ if(mq.addEventListener)mq.addEventListener('change',sync);else mq.addListener(sync);sync();
+ const fix=s=>s.replace(/\bPress Space\b/g,'Tap').replace(/\bpress Space\b/g,'tap').replace(/\bpresses Space\b/g,'taps').replace(/\bHover to flip\b/g,'Tap to flip');
+ const walk=n=>{if(n.nodeType===3){const v=n.nodeValue,p=n.parentNode,w=(p&&p.classList&&p.classList.contains('kbd')&&v.trim()==='Space')?'Tap':fix(v);if(w!==v)n.nodeValue=w}else if(n.nodeType===1&&n.id!=='tapFlag'){n.childNodes.forEach(walk)}};
+ if(TOUCH){document.body.classList.add('touch');walk($('main'));new MutationObserver(ms=>ms.forEach(m=>{m.addedNodes.forEach(walk);if(m.type==='characterData')walk(m.target)})).observe($('main'),{childList:true,subtree:true,characterData:true})}
+})();
 show('home');
 })();

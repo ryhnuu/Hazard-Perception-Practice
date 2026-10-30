@@ -2,7 +2,8 @@
 <html lang="en-GB" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c2340">
 <title>Hazard Ready: hazard perception practice</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -20,11 +21,12 @@
       <button data-go="exam">Mock Exam</button>
       <button data-go="profile">Profile</button>
     </nav>
+    <details class="ctlw" open><summary>Settings</summary>
     <div class="ctl">
       <label>Theme <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="hc">High contrast</option></select></label>
       <label><input type="checkbox" id="rm"> Reduce motion</label>
       <label><input type="checkbox" id="cc" checked> Captions</label>
-    </div>
+    </div></details>
   </div>
   <div id="steps" class="hidden" aria-label="Test progress"></div>
 </header>
@@ -95,7 +97,7 @@
   </div>
   <div id="flags" aria-hidden="true"></div>
   <div id="capt"></div>
-  <div id="live" class="card"><span class="kbd sm">Space</span> <b>Press Space</b> as soon as you see a developing hazard. Hints are only shown after the clip.</div>
+  <div id="live" class="card"><span class="kbd sm">Space</span> <b>Press Space</b> as soon as you see a developing hazard. Hints are only shown after the clip.<button id="tapFlag" class="tapbtn" type="button">⚠️ Hazard! Tap here or tap the video</button></div>
   <div id="lesson" class="card hidden">
     <div class="row"><div id="kbd" class="kbd">Space</div><div><div id="dPhase" class="dphase">Watch the road and look for clues</div><div class="mut" id="dSub">Something may be about to develop.</div></div><div class="dpts"><span id="dPts">–</span><small>points available</small></div></div>
     <div class="tl" id="dtl"></div>
